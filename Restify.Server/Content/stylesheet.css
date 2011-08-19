@@ -1,0 +1,32 @@
+﻿body
+{
+    background: #fff url(spotify-core-logo-128x128.png) no-repeat fixed right bottom;
+    font-family: "Segoe UI";
+    font-size: 11pt;
+}
+
+a { color: #cf5521; }
+
+h1 { font-size: 18pt; line-height: 18pt; }
+h1 > .subtitle { font-size: 11pt; line-height: 11pt; color: gray; margin-top: 0; font-weight: normal; }
+
+#spotify-core-statement 
+{
+    position: absolute;
+    left: 32px;
+    bottom: 50px;
+    color: gray;
+    font-size: 9pt;
+}
+
+#form-login 
+{
+    margin: 0 auto;
+    width: 300px;
+    border: solid 1px #ccc;
+    border-radius: 3px;
+    padding: 16px;
+}
+
+ul.form { list-style: none; margin: 0; padding: 0; }
+ul.form > li > input { border: 1px solid gray; border-radius: 2px; }

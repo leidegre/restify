@@ -1,0 +1,64 @@
+﻿<!DOCTYPE html>
+<html>
+	<head>
+		<title>RESTify</title>
+        <link href="stylesheet.css" rel="stylesheet" type="text/css" />
+        <script type="text/javascript" src="jquery-1.6.2.min.js"></script>
+        <script type="text/javascript" src="jquery-tmpl.js"></script>
+        <script type="text/javascript" src="knockout-1.2.1.js"></script>
+        <script type="text/javascript" src="restify.js"></script>
+	</head>
+	<body>
+
+    <noscript>
+        RESTify will not work with script execution disabled!
+    </noscript>
+
+    <div id="form-login" data-bind="visible: !isLoggedIn()">
+        <h1>RESTify<br /><small class="subtitle">A Spotify REST API for fun</small></h1>
+        <form data-bind="submit: loginInfo.submit.bind(loginInfo)">
+            <ul class="form">
+                <li><label>user:</label></li>
+                <li><input type="text" data-bind="value: loginInfo.user" /></li>
+                <li><label>pass:</label></li>
+                <li><input type="password" data-bind="value: loginInfo.pass" /></li>
+            </ul>
+            <button type="submit">login</button>
+        </form>
+    </div>
+
+    <footer id="spotify-core-statement">
+        This product uses SPOTIFY(R) CORE but is not endorsed, certified or otherwise approved in any way by <a href="http://www.spotify.com">Spotify</a>. <br />
+        <a href="http://www.spotify.com">Spotify</a> is the registered trade mark of the Spotify Group.
+    </footer>
+
+    <script type="text/javascript">
+
+        function restifyLoginViewModel() {
+            this.user = ko.observable("");
+            this.pass = ko.observable("");
+            this.submit = function () {
+                $.postJSON("/restify/session/login", {
+                    UserName: this.user(),
+                    Password: this.pass() 
+                });
+            }
+        }
+
+        function restifyViewModel() {
+            this.isLoggedIn = ko.observable(true);
+
+            this.loginInfo = new restifyLoginViewModel();
+            
+            var self = this;
+            $.get("/restify/session/status", function (data) {
+                self.isLoggedIn(data.IsLoggedIn);
+            });
+        }
+
+        ko.applyBindings(new restifyViewModel());
+
+    </script>
+
+	</body>
+</html>
