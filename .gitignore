@@ -7,3 +7,4 @@ Restify.Server/obj/*
 Restify.Spotify/Debug/*
 Restify.Spotify/*.user
 *.suo
+Restify.Server/spotify_appkey.key
