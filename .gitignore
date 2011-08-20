@@ -1,3 +1,9 @@
 
 Restify.opensdf
 Restify.sdf
+Debug/*
+Restify.Server/bin/*
+Restify.Server/obj/*
+Restify.Spotify/Debug/*
+Restify.Spotify/*.user
+*.suo
