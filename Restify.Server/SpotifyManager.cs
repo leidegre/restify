@@ -3,7 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
-using Restify.Spotify;
+using Restify.Client;
+using System.IO;
 
 namespace Restify
 {
@@ -21,12 +22,26 @@ namespace Restify
         // We do no't expose the `SpotifySession` object directly
         // the manager needs to be thread safe because it's being invoked through
         // WCF service requests
-        Spotify.SpotifySession _session;
+        SpotifySession _session;
 
         private SpotifyManager()
         {
-            _session = new Spotify.SpotifySession(null);
-            _session.Initialize(Program.g_appkey);
+            _session = new SpotifySession();
+
+            byte[] appkey = null;
+
+            if (File.Exists("spotify_appkey.key"))
+                appkey = File.ReadAllBytes("spotify_appkey.key");
+            else if (File.Exists(@"..\..\spotify_appkey.key"))
+                appkey = File.ReadAllBytes(@"..\..\spotify_appkey.key");
+
+            if (appkey == null)
+            {
+                throw new InvalidOperationException("Cannot find spotify application key.");
+            }
+
+            _session.Initialize(appkey);
+
             ThreadPool.QueueUserWorkItem(_ => _session.Run());
         }
 
@@ -34,42 +49,12 @@ namespace Restify
 
         public bool Login(string user, string pass)
         {
-            lock (this)
-            {
-                using (var waitHandle = new ManualResetEventSlim(false))
-                {
-                    Spotify.SpotifyEventHandler loggedIn = null;
-                    loggedIn =
-                        (sender, e) => {
-                            waitHandle.Set();
-                            sender.LoggedIn -= loggedIn;
-                        };
-                    _session.LoggedIn += loggedIn;
-                    _session.Login(user, pass);
-                    waitHandle.Wait(_defaultTimeout);
-                }
-            }
-            return IsLoggedIn;
+            return _session.Login(user, pass);
         }
 
         public List<SpotifyPlaylist> GetPlaylists()
         {
-            var playlists = new List<SpotifyPlaylist>();
-
-            lock (this)
-            {
-                var count = _session.Playlists.Count;
-                for (int i = 0; i < count; i++)
-                {
-                    var pl = _session.Playlists[i];
-                    if (pl != null)
-                    {
-                        playlists.Add(pl);
-                    }
-                }
-            }
-
-            return playlists;
+            return _session.GetPlaylistCollection();
         }
     }
 }

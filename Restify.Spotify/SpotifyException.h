@@ -2,7 +2,7 @@
 
 namespace Restify
 {
-    namespace Spotify
+    namespace Client
     {
         public ref class SpotifyException : Exception
         {

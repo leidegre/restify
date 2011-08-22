@@ -3,148 +3,45 @@
 
 namespace Restify
 {
-    namespace Spotify
+    namespace Client
     {
         void SP_CALLCONV Spotify_logged_in(sp_session *session, sp_error error)
         {
-            trace("Spotify_logged_in: %s\r\n", sp_error_message(error));
+            trace("[%u] Spotify_logged_in: %s\r\n", GetCurrentThreadId(), sp_error_message(error));
             auto s = GetSpotifySession(session);
-            s->OnLoggedIn(gcnew SpotifyEventArgs(error));
+            s->_loggedInError = error;
+            s->_loggedInEvent->Set();
         }
 
         void SP_CALLCONV Spotify_logged_out(sp_session *session)
         {
-            trace("Spotify_logged_out\r\n");
+            trace("[%u] Spotify_logged_out\r\n", GetCurrentThreadId());
         }
 
         void SP_CALLCONV Spotify_connection_error(sp_session *session, sp_error error)
         {
-            trace("Spotify_connection_error: %s\r\n", sp_error_message(error));
+            trace("[%u] Spotify_connection_error: %s\r\n", GetCurrentThreadId(), sp_error_message(error));
         }
 
         void SP_CALLCONV Spotify_notify_main_thread(sp_session *session)
         {
-            trace("Spotify_notify_main_thread\r\n");
+            trace("[%u] Spotify_notify_main_thread\r\n", GetCurrentThreadId());
             GetSpotifySession(session)->Notify();
         }
 
         void SP_CALLCONV Spotify_metadata_updated(sp_session *session)
         {
-            trace("Spotify_metadata_updated\r\n");
+            trace("[%u] Spotify_metadata_updated\r\n", GetCurrentThreadId());
         }
 
         void SP_CALLCONV Spotify_end_of_track(sp_session *session)
         {
-            trace("Spotify_end_of_track\r\n");
+            trace("[%u] Spotify_end_of_track\r\n", GetCurrentThreadId());
         }
 
         void SP_CALLCONV Spotify_play_token_lost(sp_session *session)
         {
-            trace("Spotify_play_token_lost\r\n");
-        }
-
-        //
-        // SIMPLE AUDIO RING BUFFER
-        //
-        // (audio will stutter if the buffer is too small, 
-        //  increasing the chunk size might help with that)
-        // the waveform API isn't very capable but it's simple to use
-        //
-        static const int    audio_buffer_chunk_count    = 256;
-        static const int    audio_buffer_chunk_size     = sizeof(WAVEHDR) + 8 * 1024;
-        void               *audio_buffer;
-        unsigned            audio_buffer_head;
-        unsigned            audio_buffer_tail;
-
-        int SP_CALLCONV Spotify_music_delivery(sp_session *session, const sp_audioformat *format, const void *frames, int num_frames)
-        {
-            MMRESULT result;
-
-            if (num_frames == 0)
-                return 0; // audio discontinuity, do nothing
-
-            static LARGE_INTEGER freq;
-            static BOOL _freq = QueryPerformanceFrequency(&freq);
-
-            LARGE_INTEGER t0, t;
-            QueryPerformanceCounter(&t0);
-
-            auto s = GetSpotifySession(session);
-
-            if (s->_waveOut == nullptr)
-            {
-                WAVEFORMATEX fmt;
-                RtlZeroMemory(&fmt, sizeof(WAVEFORMATEX));
-                fmt.wFormatTag = WAVE_FORMAT_PCM;
-                fmt.nChannels = format->channels;
-                fmt.nSamplesPerSec = format->sample_rate;
-                fmt.nAvgBytesPerSec = format->sample_rate * 2 * format->channels;
-                fmt.nBlockAlign = 2 * format->channels;
-                fmt.wBitsPerSample = 16;
-                fmt.cbSize = sizeof(WAVEFORMATEX);
-                
-                HWAVEOUT waveOut;
-                if (waveOutOpen(&waveOut, WAVE_MAPPER, &fmt, NULL, NULL, CALLBACK_NULL) == MMSYSERR_NOERROR)
-                {
-                    if (s->_waveOut != nullptr)
-                        free(audio_buffer); // if the _waveOut field has been set before, there is an audio buffer to be freed
-
-                    audio_buffer        = malloc(audio_buffer_chunk_count * audio_buffer_chunk_size);
-                    audio_buffer_head   = 0;
-                    audio_buffer_tail   = 0;
-                    
-                    s->_waveOut = waveOut;
-                }
-            }
-
-            PVOID p, pBuffer;
-            WAVEHDR *wave;
-
-            int frameBufferCount = audio_buffer_head - audio_buffer_tail;
-            if (frameBufferCount > 0)
-            {
-                // tail
-                p           = (PCHAR)audio_buffer + (audio_buffer_tail % audio_buffer_chunk_count) * audio_buffer_chunk_size;
-                pBuffer     = (PCHAR)p + sizeof(WAVEHDR);
-                wave        = (WAVEHDR *)p;
-
-                if (waveOutUnprepareHeader(s->_waveOut, wave, sizeof(WAVEHDR)) != WAVERR_STILLPLAYING)
-                {
-                    audio_buffer_tail++;
-                }
-            }
-
-            // generic error 
-            // (it's not an actual error but we wan't a single point of exit 
-            // for this callback method to simplify the control flow)
-            result = MMSYSERR_ERROR; 
-
-            if (frameBufferCount < audio_buffer_chunk_count)
-            {
-                // head
-                p       = (PCHAR)audio_buffer + (audio_buffer_head++ % audio_buffer_chunk_count) * audio_buffer_chunk_size;
-                pBuffer = (PCHAR)p + sizeof(WAVEHDR);
-                wave    = (WAVEHDR *)p;
-
-                num_frames = min((audio_buffer_chunk_size - sizeof(WAVEHDR)) / (2 * format->channels), num_frames);
-
-                RtlZeroMemory(wave, sizeof(WAVEHDR));
-                wave->lpData = (LPSTR)pBuffer;
-                wave->dwBufferLength = num_frames * (2 * format->channels);
-
-                RtlCopyMemory(pBuffer, frames, num_frames * (2 * format->channels));
-
-                if ((result = waveOutPrepareHeader(s->_waveOut, wave, sizeof(WAVEHDR))) == MMSYSERR_NOERROR)
-                    result = waveOutWrite(s->_waveOut, wave, sizeof(WAVEHDR));
-            }
-            
-            QueryPerformanceCounter(&t);
-
-            trace("Spotify_music_delivery frameBufferCount: %5u dT=%6llu us\r\n", frameBufferCount, ((1000 * 1000) * (t.QuadPart - t0.QuadPart)) / freq.QuadPart);
-            
-            // bad returning 0, libSpotify will callback at a later time
-            // we do this to throttle
-            return result == MMSYSERR_NOERROR ? num_frames : 0;
+            trace("[%u] Spotify_play_token_lost\r\n", GetCurrentThreadId());
         }
 
         gcroot<SpotifySession ^> GetSpotifySession(sp_session* s)
@@ -152,17 +49,18 @@ namespace Restify
             return *static_cast<gcroot<SpotifySession ^> *>(sp_session_userdata(s));
         }
 
-        SpotifySession::SpotifySession(SynchronizationContext^ synchronizationContext)
+        SpotifySession::SpotifySession()
+            : _syncRoot(gcnew Object())
         {
             _this = new gcroot<SpotifySession ^>(this);
-            _sync = synchronizationContext;
             _callbacks = new sp_session_callbacks;
             _config = new sp_session_config;
             _session = nullptr;
             _is_stop_pending = false;
+            _synq = gcnew ConcurrentQueue<ISpotifyAction ^>();
 
-            // events
-            _loggedInDelegate = gcnew SendOrPostCallback(this, &SpotifySession::OnLoggedInDelegate);
+            // wait primitives
+            _loggedInEvent = gcnew ManualResetEventSlim(false);
         }
 
         SpotifySession::~SpotifySession()
@@ -215,6 +113,7 @@ namespace Restify
             sp_session *session;
 
             err = sp_session_create(_config, &session);
+
             if (SP_ERROR_OK != err)
             {
                 throw gcnew SpotifyException(err);
@@ -223,12 +122,16 @@ namespace Restify
             _session = session;
         }
 
-        void SpotifySession::Login(String ^user, String ^pass)
+        bool SpotifySession::Login(String ^user, String ^pass)
         {
-            pin_ptr<Byte> userString = &StringToAnsi(user)[0];
-            pin_ptr<Byte> passString = &StringToAnsi(pass)[0];
-            trace("sp_session_login: %s:%s\r\n", (const char *)userString, (const char *)passString);
-            sp_session_login(get_session(), (const char *)userString, (const char *)passString);
+            LOCK(this); // no concurrency
+            _loggedInEvent->Reset();
+            Do(gcnew SpotifyLoginAction(user, pass));
+            if (!_loggedInEvent->Wait(DefaultTimeout))
+            {
+                throw gcnew TimeoutException();
+            }
+            return _loggedInError == SP_ERROR_OK;
         }
 
         void SpotifySession::Logout()
@@ -236,53 +139,46 @@ namespace Restify
             sp_session_logout(get_session());
         }
 
-        SpotifyPlaylistCollection^ SpotifySession::Playlists::get()
+        List<SpotifyPlaylist ^> ^SpotifySession::GetPlaylistCollection()
         {
-            if (_pl == nullptr)
+            LOCK(this);
+            if (_pl_container == nullptr)
             {
-                auto *pl_container = sp_session_playlistcontainer(get_session());
-                if (pl_container != nullptr)
+                _getPlaylistCollection = gcnew SpotifyGetPlaylistCollectionAction();
+                Do(_getPlaylistCollection);
+                if (!_getPlaylistCollection->Wait())
                 {
-                    _pl = gcnew SpotifyPlaylistCollection(this, pl_container);
+                    throw gcnew TimeoutException();
                 }
+                _getPlaylistCollection = nullptr;
             }
-            return _pl;
+            return _pl_container->ToList();
         }
-
-        // <events>
         
-        void SpotifySession::OnLoggedInDelegate(Object ^e)
-        {
-            LoggedIn(this, static_cast<SpotifyEventArgs ^>(e));
-        }
-
-        void SpotifySession::OnLoggedIn(SpotifyEventArgs ^e)
-        {
-            if (_sync != nullptr)
-            {
-                _sync->Post(_loggedInDelegate, e);
-            }
-            else
-            {
-                LoggedIn(this, e);
-            }
-        }
-
-        // </events>
-
-        // http://stackoverflow.com/questions/143063/eventwaithandle-behavior-for-pthread-cond-t
-
-        void SpotifySession::Notify()
-        {
-            Monitor::Enter(this);
-            _notify_do = true;
-            Monitor::Pulse(this);
-            Monitor::Exit(this);
-        }
-
+        // Stuff you might wanna do
+        
         void SpotifySession::Shutdown()
         {
             _is_stop_pending = true;
+            Notify();
+        }
+
+        void SpotifySession::Play(SpotifyTrack ^track)
+        {
+            //_track = track;
+        }
+
+        // THIS IS BASED ON THE JUKEBOX SAMPLE PROVIDED IN THE libspotify DISTRIBUTION
+        // THE MANAGED EQUIVALENT OF THIS USES THE Monitor ref class AND IT SYNCHRONIZES USING
+        // A PRIVATE SYNCHRONIZATION OBJECT
+        //  http://stackoverflow.com/questions/143063/eventwaithandle-behavior-for-pthread-cond-t
+
+        void SpotifySession::Notify()
+        {
+            Monitor::Enter(_syncRoot);
+            _notify_do = true;
+            Monitor::Pulse(_syncRoot);
+            Monitor::Exit(_syncRoot);
         }
 
         void SpotifySession::Run()
@@ -291,18 +187,18 @@ namespace Restify
             // the main loop might hang if the cache is ever corrupted
             // deleting the tmp folder can resolve that problem
 
-            Monitor::Enter(this);
+            Monitor::Enter(_syncRoot);
 
             for (int next_timeout = 0;;)
             {
                 if (next_timeout == 0)
                     while (!_notify_do)
-                        Monitor::Wait(this);
+                        Monitor::Wait(_syncRoot);
                 else
-                    Monitor::Wait(this, next_timeout);
+                    Monitor::Wait(_syncRoot, next_timeout);
                 
                 _notify_do = false;
-                Monitor::Exit(this);
+                Monitor::Exit(_syncRoot);
                 
                 RunLockStep();
                 
@@ -315,32 +211,33 @@ namespace Restify
                 if (_is_stop_pending)
                     break;
 
-                Monitor::Enter(this);
+                Monitor::Enter(_syncRoot);
             }
         }
 
         void SpotifySession::RunLockStep()
         {
-            // Check pending stuff
-            if (_track != nullptr && sp_track_is_available(_session, _track->get_track()))
+            trace("[%u] RunLockStep\r\n", GetCurrentThreadId());
+
+            ISpotifyAction ^op;
+            while (_synq->TryDequeue(op))
             {
-                sp_session_player_unload(_session);
-                sp_error error;
-                error = sp_session_player_load(_session, _track->get_track());
-                if (error != SP_ERROR_OK)
-                {
-                    throw gcnew SpotifyException(error);
-                }
-                sp_session_player_play(_session, 1);
-                _track = nullptr;
+                op->Do(this);
             }
-        }
 
-        // Stuff you might wanna do
-
-        void SpotifySession::Play(SpotifyTrack ^track)
-        {
-            _track = track;
+            // Check pending stuff
+            //if (_track != nullptr && sp_track_is_available(_session, _track->get_track()))
+            //{
+            //    sp_session_player_unload(_session);
+            //    sp_error error;
+            //    error = sp_session_player_load(_session, _track->get_track());
+            //    if (error != SP_ERROR_OK)
+            //    {
+            //        throw gcnew SpotifyException(error);
+            //    }
+            //    sp_session_player_play(_session, 1);
+            //    _track = nullptr;
+            //}
         }
     }
 }

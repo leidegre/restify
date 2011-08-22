@@ -38,7 +38,7 @@
             this.user = ko.observable("");
             this.pass = ko.observable("");
             this.submit = function () {
-                $.postJSON("/restify/session/login", {
+                $.postJSON("/restify/login/", {
                     UserName: this.user(),
                     Password: this.pass() 
                 });

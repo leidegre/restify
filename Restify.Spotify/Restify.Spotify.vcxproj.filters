@@ -36,6 +36,12 @@
     <ClInclude Include="SpotifyPlaylistCollection.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="SpotifyAsync.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="BinarySearchList.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="SpotifySession.cpp">
@@ -50,5 +56,14 @@
     <ClCompile Include="SpotifyPlaylistCollection.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="SpotifySessionWaveform.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SpotifyAsync.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="README.txt" />
   </ItemGroup>
 </Project>

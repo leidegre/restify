@@ -2,8 +2,10 @@
 
 namespace Restify
 {
-    namespace Spotify
+    namespace Client
     {
+        int SP_CALLCONV Spotify_music_delivery(sp_session *session, const sp_audioformat *format, const void *frames, int num_frames);
+
         gcroot<SpotifySession ^> GetSpotifySession(sp_session* s);
 
         public ref class SpotifyEventArgs : EventArgs
@@ -38,9 +40,22 @@ namespace Restify
 
         public delegate void SpotifyEventHandler(SpotifySession^ sender, SpotifyEventArgs^ e);
 
+        public ref class SpotifySessionConfiguration
+        {
+        public:
+            property array<Byte> ^ApplicationKey;
+            property String ^CacheLocation;
+            property String ^SettingsLocation;
+        };
+
         public ref class SpotifySession
         {
+        public:
+            static const int DefaultTimeout = 30 * 1000; 
+
         private:
+            Object ^_syncRoot;
+
             gcroot<SpotifySession ^>* _this;
 
             sp_session_callbacks *_callbacks;
@@ -53,10 +68,19 @@ namespace Restify
             
             bool _is_stop_pending;
 
-            SendOrPostCallback ^_loggedInDelegate;
-
-            SpotifyPlaylistCollection ^_pl;
             SpotifyTrack ^_track;
+
+            // all asynchronous work is synchronized through primitives in this queue
+            ConcurrentQueue<ISpotifyAction ^> ^_synq;
+
+        internal:
+            // NOTE: these should only be accessed through session callbacks
+            // these are basically callbacks slots
+            sp_error _loggedInError;
+            ManualResetEventSlim ^_loggedInEvent;
+            
+            SpotifyGetPlaylistCollectionAction ^_getPlaylistCollection;
+            SpotifyPlaylistCollection ^_pl_container;
 
         internal:
             HWAVEOUT _waveOut;
@@ -68,17 +92,16 @@ namespace Restify
                 return _session; 
             }
             
-            SynchronizationContext^ _sync;
-
-            void OnLoggedInDelegate(Object^ e);
-            void OnLoggedIn(SpotifyEventArgs^ e);
+            void Do(ISpotifyAction ^op)
+            {
+                _synq->Enqueue(op);
+                Notify();
+            }
 
             void Notify();
 
         public:
-            event SpotifyEventHandler^ LoggedIn;
-
-            SpotifySession(SynchronizationContext^ synchronizationContext);
+            SpotifySession();
             ~SpotifySession();
 
             void Initialize(array<Byte> ^key);
@@ -94,20 +117,17 @@ namespace Restify
                 }
             }
 
-            void Login(String^ user, String^ pass);
+            bool Login(String ^user, String ^pass);
 
             void Logout();
 
-            property SpotifyPlaylistCollection ^Playlists
-            {
-                SpotifyPlaylistCollection ^get();
-            }
+            List<SpotifyPlaylist ^> ^GetPlaylistCollection();
 
             void Run();
 
             void Shutdown();
 
-            void Play(SpotifyTrack ^ track);
+            void Play(SpotifyTrack ^track);
         };
     }
 }

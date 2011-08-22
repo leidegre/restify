@@ -1,14 +1,28 @@
 
 #include "restify.h"
 
-array<Byte>^ StringToAnsi(String^ s)
+array<Byte> ^StringToSpString(String^ s)
 {
     if (s == nullptr || s->Length == 0)
     {
         return gcnew array<Byte>(1);
     }
-    int length = Encoding::Default->GetByteCount(s);
-    array<Byte>^ cstr = gcnew array<Byte>(length + 1);
-    Encoding::Default->GetBytes(s, 0, s->Length, cstr, 0);
+    int length = Encoding::UTF8->GetByteCount(s);
+    array<Byte> ^cstr = gcnew array<Byte>(length + 1);
+    Encoding::UTF8->GetBytes(s, 0, s->Length, cstr, 0);
     return cstr;
+}
+
+String ^SpStringToString(const char *s)
+{
+    int byteCount = strlen(s);
+    int charCount = Encoding::UTF8->GetCharCount((Byte *)const_cast<char *>(s), byteCount);
+    if (charCount > 0)
+    {
+        array<wchar_t> ^chBuffer = gcnew array<wchar_t>(charCount);
+        pin_ptr<wchar_t> chPtr = &chBuffer[0];
+        int count = Encoding::UTF8->GetChars((Byte *)const_cast<char *>(s), byteCount, chPtr, charCount);
+        return gcnew String(chBuffer, 0, count);
+    }
+    return String::Empty;
 }

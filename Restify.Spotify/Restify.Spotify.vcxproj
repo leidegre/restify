@@ -71,11 +71,15 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="restify.cpp" />
+    <ClCompile Include="SpotifyAsync.cpp" />
     <ClCompile Include="SpotifyPlaylist.cpp" />
     <ClCompile Include="SpotifyPlaylistCollection.cpp" />
     <ClCompile Include="SpotifySession.cpp" />
+    <ClCompile Include="SpotifySessionWaveform.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="BinarySearchList.h" />
+    <ClInclude Include="SpotifyAsync.h" />
     <ClInclude Include="restify.h" />
     <ClInclude Include="SpotifyException.h" />
     <ClInclude Include="SpotifyObservable.h" />
@@ -86,6 +90,9 @@
   </ItemGroup>
   <ItemGroup>
     <Reference Include="System" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="README.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
