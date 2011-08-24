@@ -1,0 +1,1 @@
+﻿netsh http add urlacl url=http://+:80/restify user=%USERDOMAIN%\%USERNAME%

@@ -82,6 +82,8 @@
     <None Include="debugger-disable.reg" />
     <None Include="debugger-enable.reg" />
     <None Include="fiddler2.reg" />
+    <None Include="urlacladd.bat" />
+    <None Include="urlaclrm.bat" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Content\index.htm" />
