@@ -4,6 +4,7 @@ using System.Linq;
 using System.Runtime.Serialization;
 using System.ServiceModel;
 using System.Text;
+using System.Diagnostics;
 
 namespace Restify.Services
 {
@@ -14,8 +15,16 @@ namespace Restify.Services
             return new RestifyViewModel { IsLoggedIn = SpotifyManager.Current.IsLoggedIn };
         }
 
+        public RestifyLoginResponse IsLoggedIn(RestifyLogin login)
+        {
+            return new RestifyLoginResponse { IsLoggedIn = SpotifyManager.Current.IsLoggedIn };
+        }
+
         public bool Login(RestifyLogin login)
         {
+            if (Debugger.IsAttached)
+                Debugger.Break();
+
             return SpotifyManager.Current.Login(login.UserName, login.Password);
         }
 
@@ -34,5 +43,7 @@ namespace Restify.Services
 
             return playlists;
         }
+
+
     }
 }

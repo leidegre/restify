@@ -34,6 +34,8 @@ namespace Restify
                 appkey = File.ReadAllBytes("spotify_appkey.key");
             else if (File.Exists(@"..\..\spotify_appkey.key"))
                 appkey = File.ReadAllBytes(@"..\..\spotify_appkey.key");
+            else if (File.Exists(@"..\..\..\..\spotify_appkey.key"))
+                appkey = File.ReadAllBytes(@"..\..\..\..\spotify_appkey.key");
 
             if (appkey == null)
             {

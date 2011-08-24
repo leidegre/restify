@@ -11,11 +11,15 @@ using Restify.Services;
 using System.Collections.Concurrent;
 using Restify.Threading;
 using System.Diagnostics;
+using System.ComponentModel;
 
 namespace Restify
 {
     class Program
     {
+        [DllImport("kernel32.dll")]
+        extern static IntPtr GetConsoleWindow();
+
         [DllImport("kernel32.dll")]
         extern static bool SetDllDirectory(string lpPathName);
 
@@ -26,21 +30,48 @@ namespace Restify
             // it will trigger a load of the "libspotify.dll" 
             // which if not found will crash the app
             // "libspotify.dll" has to be found in the DLL search paths
-            var dllSerachPath = Path.GetFullPath(@"..\..\..\lib");
-            SetDllDirectory(dllSerachPath);
+            SetDllDirectory(Path.GetFullPath(@"..\..\..\lib"));
+
+            // If launched with a console window 
+            // (this is not the case when running as a service or 
+            // when creating child processes)
+            if (GetConsoleWindow() != IntPtr.Zero)
+                Trace.Listeners.Add(new ConsoleTraceListener());
+
+            Trace.WriteLine(string.Format("CurrentDirectory: {0}", Environment.CurrentDirectory));
 
             string instanceName = null;
 
             for (int i = 0; i < args.Length; i++)
             {
-                if ("/InstanceName".Equals(args[i], StringComparison.OrdinalIgnoreCase))
+                if ("/DllDirectory".Equals(args[i], StringComparison.OrdinalIgnoreCase))
                 {
                     if (!(i + 1 < args.Length))
                     {
-                        Console.Error.WriteLine("Option /InstanceName missing argument: instanceName");
+                        Trace.WriteLine("Option /DllDirectory missing argument: path", "Error");
                         return 1;
                     }
-                    instanceName = args[++i];
+                    var dllDirectory = Path.GetFullPath(args[++i]);
+                    if (!SetDllDirectory(dllDirectory))
+                    {
+                        Trace.WriteLine(string.Format("Option /DllDirectory: cannot set DLL directory to '{0}'", dllDirectory), "Error");
+                        return 1;
+                    }
+                }
+                else if ("/InstanceName".Equals(args[i], StringComparison.OrdinalIgnoreCase))
+                {
+                    if (!(i + 1 < args.Length))
+                    {
+                        Trace.WriteLine("Option /InstanceName missing argument: instanceName", "Error");
+                        return 1;
+                    }
+                    var s = args[++i];
+                    if (string.IsNullOrEmpty(s) || s.IndexOfAny(Path.GetInvalidPathChars()) != -1)
+                    {
+                        Trace.WriteLine(string.Format("Option /InstanceName argument instanceName '{0}' is invalid", s), "Error");
+                        return 1;
+                    }
+                    instanceName = s;
                 }
             }
 
@@ -71,21 +102,25 @@ namespace Restify
         {
             MessageQueue = new MessageQueue();
 
-            Console.WriteLine("Configuring service host...");
+            Trace.WriteLine("Configuring service host...");
 
             var frontEndHost = new ServiceHost(typeof(FrontEndService));
             var frontEndBaseUri = "http://localhost/restify";
             var frontEndEndPoint = frontEndHost.AddServiceEndpoint(typeof(IFrontEndService), new WebHttpBinding(), frontEndBaseUri);
             frontEndEndPoint.Behaviors.Add(new WebHttpBehavior());
             frontEndHost.Open();
+            
+            Trace.WriteLine(frontEndBaseUri);
 
             var loginHost = new ServiceHost(typeof(LoginService));
-            var loginBaseUri = "http://localhost/restify/login";
+            var loginBaseUri = "http://localhost/restify/auth";
             var loginEndPoint = loginHost.AddServiceEndpoint(typeof(ILoginService), new WebHttpBinding(), loginBaseUri);
             loginEndPoint.Behaviors.Add(new WebHttpBehavior());
             loginHost.Open();
+            
+            Trace.WriteLine(loginBaseUri);
 
-            Console.WriteLine("OK");
+            Trace.WriteLine("OK");
 
             ThreadPool.QueueUserWorkItem(_ => {
                 Console.WriteLine("Press 'S' to shutdown server...");
@@ -93,7 +128,9 @@ namespace Restify
                     ;
                 lock (LoginService.userMapping)
                 {
-                    foreach (var item in LoginService.userMapping)
+                    // .ToList() prevents collection was modified during enumeration error
+                    // from being thrown
+                    foreach (var item in LoginService.userMapping.ToList()) 
                     {
                         item.Value.Shutdown();
                     }
@@ -108,33 +145,40 @@ namespace Restify
 
         private static int RunInstance(string instanceName)
         {
-            if (Debugger.IsAttached)
-                Debugger.Break();
-
             var exitCode = 0;
-            using (var backEndHost = new ServiceHost(typeof(BackEndService)))
+            using (var serviceHost = new ServiceHost(typeof(BackEndService)))
             {
                 try
                 {
-                    var backEndBaseUri = "http://localhost/restify/user/" + instanceName;
-                    var backEndEndPoint = backEndHost.AddServiceEndpoint(typeof(IBackEndService), new WebHttpBinding { Security = new WebHttpSecurity { Mode = WebHttpSecurityMode.None } }, backEndBaseUri);
-                    backEndEndPoint.Behaviors.Add(new WebHttpBehavior());
-                    backEndHost.Open();
+                    var baseUri = "http://localhost:81/restify/user/" + instanceName;
+
+                    var endPoint = serviceHost.AddServiceEndpoint(typeof(IBackEndService), new WebHttpBinding { }, baseUri);
+                    endPoint.Behaviors.Add(new WebHttpBehavior { FaultExceptionEnabled = true });
+
+                    var debugBehavior = serviceHost.Description.Behaviors.Find<ServiceDebugBehavior>();
+                    debugBehavior.IncludeExceptionDetailInFaults = true;
+                    
+                    serviceHost.Open();
+
+                    Trace.WriteLine(endPoint.Address);
                 }
                 catch (Exception ex)
                 {
-                    Console.Error.WriteLine("{0}: {1}", ex.GetType(), ex.Message);
+                    if (Debugger.IsAttached)
+                        Debugger.Break();
+
+                    Trace.WriteLine(string.Format("{0}: {1}", ex.GetType(), ex.Message), "Error");
                     exitCode = 1;
                 }
                 finally
                 {
                     // Signal that the instance is running
-                    var s = string.Format("Global\\{0}Init", instanceName);
+                    var s = string.Format(SpotifyInstance.GlobalBootInstanceFormatString, instanceName);
                     bool createdNew;
-                    using (var m = new Semaphore(0, 1, s, out createdNew))
+                    using (var waitForInit = new Semaphore(0, 1, s, out createdNew))
                     {
                         if (!createdNew)
-                            m.Release();
+                            waitForInit.Release();
                     }
                 }
 
@@ -142,19 +186,19 @@ namespace Restify
                 {
                     // Block thread, either by an existing system-wide Mutex
                     // or wait for a key press
-                    var s = string.Format("Global\\{0}Exit", instanceName);
+                    var s = string.Format(SpotifyInstance.GlobalWaitInstanceFormatString, instanceName);
                     bool createdNew;
-                    using (var exit = new Mutex(false, s, out createdNew))
+                    using (var waitForExit = new Mutex(false, s, out createdNew))
                     {
                         if (!createdNew)
                             try
                             {
-                                exit.WaitOne();
+                                waitForExit.WaitOne();
                             }
                             catch (AbandonedMutexException)
                             {
-                                // this should only happen if the parent process is killed
-                                // and cannot shutdown gracefully
+                                // this should only happen if the parent process is killed (or crashed)
+                                // as long as the original thread shutdown gracefully, this shouldn't occur
                                 return 1;
                             }
                     }

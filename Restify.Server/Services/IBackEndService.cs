@@ -16,6 +16,10 @@ namespace Restify.Services
         RestifyViewModel GetStatus();
 
         [OperationContract]
+        [WebInvoke(UriTemplate = "/is-logged-in", RequestFormat = WebMessageFormat.Json, ResponseFormat = WebMessageFormat.Json)]
+        RestifyLoginResponse IsLoggedIn(RestifyLogin login);
+
+        [OperationContract]
         [WebInvoke(UriTemplate = "/login", RequestFormat = WebMessageFormat.Json, ResponseFormat = WebMessageFormat.Json)]
         bool Login(RestifyLogin login);
 

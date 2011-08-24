@@ -5,6 +5,13 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Restify.Server", "Restify.S
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Restify.Spotify", "Restify.Spotify\Restify.Spotify.vcxproj", "{654FD394-FE7B-491E-8126-13711A1EE5FC}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{26BC70D7-981B-4285-ACF8-D4B9BE5BBE49}"
+	ProjectSection(SolutionItems) = preProject
+		README.TXT = README.TXT
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Testify", "Testify\Testify.csproj", "{75B0AD69-B2E8-405A-A4E4-70196B20CCC1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Mixed Platforms = Debug|Mixed Platforms
@@ -35,6 +42,16 @@ Global
 		{654FD394-FE7B-491E-8126-13711A1EE5FC}.Release|Win32.ActiveCfg = Release|Win32
 		{654FD394-FE7B-491E-8126-13711A1EE5FC}.Release|Win32.Build.0 = Release|Win32
 		{654FD394-FE7B-491E-8126-13711A1EE5FC}.Release|x86.ActiveCfg = Release|Win32
+		{75B0AD69-B2E8-405A-A4E4-70196B20CCC1}.Debug|Mixed Platforms.ActiveCfg = Debug|x86
+		{75B0AD69-B2E8-405A-A4E4-70196B20CCC1}.Debug|Mixed Platforms.Build.0 = Debug|x86
+		{75B0AD69-B2E8-405A-A4E4-70196B20CCC1}.Debug|Win32.ActiveCfg = Debug|x86
+		{75B0AD69-B2E8-405A-A4E4-70196B20CCC1}.Debug|x86.ActiveCfg = Debug|x86
+		{75B0AD69-B2E8-405A-A4E4-70196B20CCC1}.Debug|x86.Build.0 = Debug|x86
+		{75B0AD69-B2E8-405A-A4E4-70196B20CCC1}.Release|Mixed Platforms.ActiveCfg = Release|x86
+		{75B0AD69-B2E8-405A-A4E4-70196B20CCC1}.Release|Mixed Platforms.Build.0 = Release|x86
+		{75B0AD69-B2E8-405A-A4E4-70196B20CCC1}.Release|Win32.ActiveCfg = Release|x86
+		{75B0AD69-B2E8-405A-A4E4-70196B20CCC1}.Release|x86.ActiveCfg = Release|x86
+		{75B0AD69-B2E8-405A-A4E4-70196B20CCC1}.Release|x86.Build.0 = Release|x86
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -12,7 +12,11 @@ namespace Restify.Services
     public interface ILoginService
     {
         [OperationContract]
-        [WebInvoke(UriTemplate = "/", RequestFormat = WebMessageFormat.Json, ResponseFormat = WebMessageFormat.Json)]
-        bool Login(RestifyLogin login);
+        [WebInvoke(UriTemplate = "/status", RequestFormat = WebMessageFormat.Json, ResponseFormat = WebMessageFormat.Json)]
+        RestifyLoginResponse Query(RestifyLogin login);
+
+        [OperationContract]
+        [WebInvoke(UriTemplate = "/login", RequestFormat = WebMessageFormat.Json, ResponseFormat = WebMessageFormat.Json)]
+        RestifyLoginResponse Login(RestifyLogin login);
     }
 }

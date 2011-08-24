@@ -78,7 +78,6 @@
     <ClCompile Include="SpotifySessionWaveform.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="BinarySearchList.h" />
     <ClInclude Include="SpotifyAsync.h" />
     <ClInclude Include="restify.h" />
     <ClInclude Include="SpotifyException.h" />

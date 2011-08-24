@@ -8,3 +8,7 @@ Restify.Spotify/Debug/*
 Restify.Spotify/*.user
 *.suo
 Restify.Server/spotify_appkey.key
+Restify.Server/*.csproj.user
+Testify/bin/*
+Testify/obj/*
+Testify/*.csproj.user
