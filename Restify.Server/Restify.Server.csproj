@@ -50,6 +50,7 @@
     <Compile Include="Services\RestifyLoginResponse.cs" />
     <Compile Include="Services\SpotifyInstance.cs" />
     <Compile Include="Threading\CreateMutexMessage.cs" />
+    <Compile Include="Threading\DelegateMessage.cs" />
     <Compile Include="Threading\IMessage.cs" />
     <Compile Include="Threading\MessageQueue.cs" />
     <Compile Include="Threading\ReleaseMutexMessage.cs" />

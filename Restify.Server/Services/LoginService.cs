@@ -86,22 +86,39 @@ namespace Restify.Services
 
         public RestifyLoginResponse Login(RestifyLogin login)
         {
-            var svc = GetInstance(login.UserName);
-            using (new OperationContextScope((IContextChannel)svc))
+            using (var waitEvent = new ManualResetEventSlim(false))
             {
-                svc.Ping();
+                ThreadPool.QueueUserWorkItem(_ => {
+                    var svc = GetInstance(login.UserName);
+                    using (new OperationContextScope((IContextChannel)svc))
+                    {
+                        svc.Ping();
+                    }
+                    waitEvent.Set();
+                });
+                waitEvent.Wait();
             }
-
             try
             {
-                var success = svc.Login(login);
-                ((ICommunicationObject)svc).Close();
-                return new RestifyLoginResponse { IsLoggedIn = success.IsLoggedIn };
+                RestifyLoginResponse response = null;
+                using (var waitEvent = new ManualResetEventSlim(false))
+                {
+                    ThreadPool.QueueUserWorkItem(_ => {
+                        var svc = GetInstance(login.UserName);
+                        using (new OperationContextScope((IContextChannel)svc))
+                        {
+                            response = svc.Login(login);
+                        }
+                        waitEvent.Set();
+                    });
+                    waitEvent.Wait();
+                }
+                return response;
             }
             catch (FaultException ex)
             {
                 Trace.WriteLine(string.Format("FaultException: {0}", ex.Message), "Error");
-                ((ICommunicationObject)svc).Abort();
+                //((ICommunicationObject)svc).Abort();
                 throw;
             }
         }
