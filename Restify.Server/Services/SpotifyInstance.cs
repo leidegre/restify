@@ -69,20 +69,19 @@ namespace Restify.Services
             };
         }
 
+
         private ChannelFactory<IBackEndService> clientFactory;
 
         public void Initialize()
         {
-            clientFactory = new ChannelFactory<IBackEndService>(new WebHttpBinding(), new EndpointAddress("http://127.0.0.1:8888/restify/user/" + InstanceName));
-            clientFactory.Endpoint.Behaviors.Add(new WebHttpBehavior());
-
-            //clientFactory.Endpoint.Behaviors.Add(new WebHttpBehavior {
-            //    AutomaticFormatSelectionEnabled = false,
-            //    DefaultBodyStyle = WebMessageBodyStyle.Bare,
-            //    DefsaultOutgoingRequestFormat = WebMessageFormat.Json,
-            //    DefaultOutgoingResponseFormat = WebMessageFormat.Json,
-            //    FaultExceptionEnabled = true,
-            //});
+            clientFactory = new ChannelFactory<IBackEndService>(new WebHttpBinding(), new EndpointAddress("http://localhost:81/restify/user/" + InstanceName));
+            clientFactory.Endpoint.Behaviors.Add(new WebHttpBehavior {
+                AutomaticFormatSelectionEnabled = false,
+                DefaultBodyStyle = WebMessageBodyStyle.Bare,
+                DefaultOutgoingRequestFormat = WebMessageFormat.Json,
+                DefaultOutgoingResponseFormat = WebMessageFormat.Json,
+                FaultExceptionEnabled = true,
+            });
 
             //// step one - find and remove default endpoint behavior 
             //var defaultCredentials = channelFactory.Endpoint.Behaviors.Find<ClientCredentials>();
@@ -97,20 +96,8 @@ namespace Restify.Services
             //channelFactory.Endpoint.Behaviors.Add(loginCredentials); //add required ones
         }
 
-        public IBackEndService CreateClient()
+        public IBackEndService CreateProxy()
         {
-            //ICommunicationObject client;
-            //try
-            //{
-            //    client = channelFactory.CreateChannel();
-            //    // ...
-            //    client.Close();
-            //}
-            //catch
-            //{
-            //    client.Abort();
-            //}
-
             return clientFactory.CreateChannel();
         }
     }

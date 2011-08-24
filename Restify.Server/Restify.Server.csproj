@@ -47,8 +47,10 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Services\RestifyLoginRequest.cs" />
     <Compile Include="Services\RestifyLoginResponse.cs" />
     <Compile Include="Services\SpotifyInstance.cs" />
+    <Compile Include="Threading\ThreadContext.cs" />
     <Compile Include="Threading\CreateMutexMessage.cs" />
     <Compile Include="Threading\DelegateMessage.cs" />
     <Compile Include="Threading\IMessage.cs" />
@@ -62,7 +64,6 @@
     <Compile Include="Services\IFrontEndService.cs" />
     <Compile Include="Services\ILoginService.cs" />
     <Compile Include="Services\LoginService.cs" />
-    <Compile Include="Services\RestifyLogin.cs" />
     <Compile Include="Services\RestifyPlaylist.cs" />
     <Compile Include="Services\RestifyPlaylistCollection.cs" />
     <Compile Include="Services\RestifyViewModel.cs" />
@@ -75,10 +76,12 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <None Include="app.config" />
-    <None Include="disable.reg" />
+    <None Include="app.config">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="debugger-disable.reg" />
+    <None Include="debugger-enable.reg" />
     <None Include="fiddler2.reg" />
-    <None Include="debugger.reg" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Content\index.htm" />

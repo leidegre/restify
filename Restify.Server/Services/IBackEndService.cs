@@ -12,14 +12,6 @@ namespace Restify.Services
     public interface IBackEndService
     {
         [OperationContract]
-        [WebGet(UriTemplate = "/ping")]
-        void Ping();
-
-        [OperationContract]
-        [WebGet(UriTemplate = "/status", ResponseFormat = WebMessageFormat.Json)]
-        RestifyViewModel GetStatus();
-
-        [OperationContract]
         [WebInvoke(UriTemplate = "/is-logged-in", RequestFormat = WebMessageFormat.Json, ResponseFormat = WebMessageFormat.Json)]
         RestifyLoginResponse IsLoggedIn(RestifyLogin login);
 

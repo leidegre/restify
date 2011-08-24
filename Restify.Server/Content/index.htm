@@ -14,7 +14,7 @@
         RESTify will not work with script execution disabled!
     </noscript>
 
-    <div id="form-login" data-bind="visible: !isLoggedIn()">
+    <div id="form-login" data-bind="visible: !loginInfo.isLoggedIn()">
         <h1>RESTify<br /><small class="subtitle">A Spotify REST API for fun</small></h1>
         <form data-bind="submit: loginInfo.submit.bind(loginInfo)">
             <ul class="form">
@@ -23,6 +23,9 @@
                 <li><label>pass:</label></li>
                 <li><input type="password" data-bind="value: loginInfo.pass" /></li>
             </ul>
+            <p>
+                <label><input type="checkbox" data-bind="value: loginInfo.keepMeLoggedIn" /> keep me logged in</label>
+            </p>
             <button type="submit">login</button>
         </form>
     </div>
@@ -35,24 +38,33 @@
     <script type="text/javascript">
 
         function restifyLoginViewModel() {
+            this.isLoggedIn = ko.observable(false);
+            this.instanceName = "";
             this.user = ko.observable("");
             this.pass = ko.observable("");
+            this.keepMeLoggedIn = ko.observable(false);
+            var self = this;
             this.submit = function () {
                 $.postJSON("/restify/auth/login", {
                     UserName: this.user(),
-                    Password: this.pass() 
+                    Password: this.pass(),
+                    KeepMeLoggedIn: this.keepMeLoggedIn(),
+                }, function (data) {
+                    self.isLoggedIn(data.IsLoggedIn);
+                    self.instanceName = data.InstanceName;
                 });
             }
         }
 
         function restifyViewModel() {
+            
             this.isLoggedIn = ko.observable(true);
 
             this.loginInfo = new restifyLoginViewModel();
 
             var self = this;
             $.postJSON("/restify/auth/status", {
-                UserName: self.loginInfo.user(),
+                UserName: self.loginInfo.user()
             }, function (data) {
                 self.isLoggedIn(data.IsLoggedIn);
             });

@@ -29,4 +29,19 @@ h1 > .subtitle { font-size: 11pt; line-height: 11pt; color: gray; margin-top: 0;
 }
 
 ul.form { list-style: none; margin: 0; padding: 0; }
-ul.form > li > input { border: 1px solid gray; border-radius: 2px; }
+ul.form > li 
+{
+    line-height: 1.5em;
+}
+ul.form > li > input 
+{ 
+    border: 1px solid gray; 
+    border-left-color: #aaa; 
+    border-bottom-color: #ccc; 
+    border-right-color: #ccc; 
+    border-radius: 2px; 
+    line-height: 1.5em;
+    height: 1.5em;
+}
+
+input[type=text], input[type=password] { width: 180px; }

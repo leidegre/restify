@@ -143,6 +143,8 @@ namespace Restify
             return MessageQueue.RunMessageLoop();
         }
 
+        public static string InstanceName { get; private set; }
+
         private static int RunInstance(string instanceName)
         {
             var exitCode = 0;
@@ -150,17 +152,18 @@ namespace Restify
             {
                 try
                 {
+                    InstanceName = instanceName;
+
                     var baseUri = "http://localhost:81/restify/user/" + instanceName;
 
                     var endPoint = serviceHost.AddServiceEndpoint(typeof(IBackEndService), new WebHttpBinding(), baseUri);
                     
                     endPoint.Behaviors.Add(new WebHttpBehavior {
-                        AutomaticFormatSelectionEnabled = false,
-                        HelpEnabled = true,
                         DefaultBodyStyle = System.ServiceModel.Web.WebMessageBodyStyle.Bare,
                         DefaultOutgoingRequestFormat = System.ServiceModel.Web.WebMessageFormat.Json,
                         DefaultOutgoingResponseFormat = System.ServiceModel.Web.WebMessageFormat.Json,
-                        FaultExceptionEnabled = true
+                        FaultExceptionEnabled = true,
+                        HelpEnabled = true,
                     });
 
                     //var metadataBehavior = serviceHost.Description.Behaviors.Find<ServiceMetadataBehavior>();
