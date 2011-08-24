@@ -10,6 +10,10 @@ namespace Restify.Services
 {
     public class BackEndService : IBackEndService
     {
+        public void Ping()
+        {
+        }
+
         public RestifyViewModel GetStatus()
         {
             return new RestifyViewModel { IsLoggedIn = SpotifyManager.Current.IsLoggedIn };
@@ -20,12 +24,12 @@ namespace Restify.Services
             return new RestifyLoginResponse { IsLoggedIn = SpotifyManager.Current.IsLoggedIn };
         }
 
-        public bool Login(RestifyLogin login)
+        public RestifyLoginResponse Login(RestifyLogin login)
         {
             if (Debugger.IsAttached)
                 Debugger.Break();
 
-            return SpotifyManager.Current.Login(login.UserName, login.Password);
+            return new RestifyLoginResponse { IsLoggedIn = SpotifyManager.Current.Login(login.UserName, login.Password) };
         }
 
         public List<RestifyPlaylist> GetPlaylists()
@@ -43,7 +47,5 @@ namespace Restify.Services
 
             return playlists;
         }
-
-
     }
 }

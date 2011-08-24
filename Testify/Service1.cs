@@ -10,9 +10,9 @@ namespace Testify
     // NOTE: You can use the "Rename" command on the "Refactor" menu to change the class name "Service1" in both code and config file together.
     public class Service1 : IService1
     {
-        public void DoWork()
+        public void DoWork(TestObject testObj)
         {
-            Console.WriteLine("Doing work!");
+            Console.WriteLine("Doing work! {0}", testObj.TestValue);
         }
     }
 }

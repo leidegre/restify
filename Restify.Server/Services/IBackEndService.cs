@@ -12,6 +12,10 @@ namespace Restify.Services
     public interface IBackEndService
     {
         [OperationContract]
+        [WebGet(UriTemplate = "/ping")]
+        void Ping();
+
+        [OperationContract]
         [WebGet(UriTemplate = "/status", ResponseFormat = WebMessageFormat.Json)]
         RestifyViewModel GetStatus();
 
@@ -21,7 +25,7 @@ namespace Restify.Services
 
         [OperationContract]
         [WebInvoke(UriTemplate = "/login", RequestFormat = WebMessageFormat.Json, ResponseFormat = WebMessageFormat.Json)]
-        bool Login(RestifyLogin login);
+        RestifyLoginResponse Login(RestifyLogin login);
 
         [OperationContract]
         [WebGet(UriTemplate = "/playlists", ResponseFormat = WebMessageFormat.Json)]

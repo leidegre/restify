@@ -75,6 +75,8 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
+    <None Include="disable.reg" />
+    <None Include="fiddler2.reg" />
     <None Include="debugger.reg" />
   </ItemGroup>
   <ItemGroup>

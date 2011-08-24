@@ -13,7 +13,7 @@ namespace Testify
     public interface IService1
     {
         [OperationContract]
-        [WebGet(UriTemplate = "/do")]
-        void DoWork();
+        [WebInvoke(UriTemplate = "/do", RequestFormat = WebMessageFormat.Json, ResponseFormat = WebMessageFormat.Json)]
+        void DoWork(TestObject testObj);
     }
 }

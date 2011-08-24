@@ -152,8 +152,24 @@ namespace Restify
                 {
                     var baseUri = "http://localhost:81/restify/user/" + instanceName;
 
-                    var endPoint = serviceHost.AddServiceEndpoint(typeof(IBackEndService), new WebHttpBinding { }, baseUri);
-                    endPoint.Behaviors.Add(new WebHttpBehavior { FaultExceptionEnabled = true });
+                    var endPoint = serviceHost.AddServiceEndpoint(typeof(IBackEndService), new WebHttpBinding(), baseUri);
+                    
+                    endPoint.Behaviors.Add(new WebHttpBehavior {
+                        AutomaticFormatSelectionEnabled = false,
+                        HelpEnabled = true,
+                        DefaultBodyStyle = System.ServiceModel.Web.WebMessageBodyStyle.Bare,
+                        DefaultOutgoingRequestFormat = System.ServiceModel.Web.WebMessageFormat.Json,
+                        DefaultOutgoingResponseFormat = System.ServiceModel.Web.WebMessageFormat.Json,
+                        FaultExceptionEnabled = true
+                    });
+
+                    //var metadataBehavior = serviceHost.Description.Behaviors.Find<ServiceMetadataBehavior>();
+                    //metadataBehavior.HttpGetEnabled = true;
+
+                    //serviceHost.Description.Behaviors.Add(new ServiceMetadataBehavior {
+                    //    HttpGetUrl = new Uri(baseUri),
+                    //    HttpGetEnabled = true
+                    //});
 
                     var debugBehavior = serviceHost.Description.Behaviors.Find<ServiceDebugBehavior>();
                     debugBehavior.IncludeExceptionDetailInFaults = true;

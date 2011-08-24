@@ -12,3 +12,5 @@ Restify.Server/*.csproj.user
 Testify/bin/*
 Testify/obj/*
 Testify/*.csproj.user
+_ReSharper.Restify/*
+*.ReSharper.user

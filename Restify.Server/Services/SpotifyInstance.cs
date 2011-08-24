@@ -8,6 +8,7 @@ using System.Threading;
 using Restify.Threading;
 using System.ServiceModel.Description;
 using System.ServiceModel.Web;
+using System.ServiceModel.Channels;
 
 namespace Restify.Services
 {
@@ -72,8 +73,16 @@ namespace Restify.Services
 
         public void Initialize()
         {
-            clientFactory = new ChannelFactory<IBackEndService>(new WebHttpBinding { }, new EndpointAddress("http://localhost:81/restify/user/" + InstanceName));
-            clientFactory.Endpoint.Behaviors.Add(new WebHttpBehavior { DefaultOutgoingRequestFormat = WebMessageFormat.Json });
+            clientFactory = new ChannelFactory<IBackEndService>(new WebHttpBinding(), new EndpointAddress("http://127.0.0.1:8888/restify/user/" + InstanceName));
+            clientFactory.Endpoint.Behaviors.Add(new WebHttpBehavior());
+
+            //clientFactory.Endpoint.Behaviors.Add(new WebHttpBehavior {
+            //    AutomaticFormatSelectionEnabled = false,
+            //    DefaultBodyStyle = WebMessageBodyStyle.Bare,
+            //    DefsaultOutgoingRequestFormat = WebMessageFormat.Json,
+            //    DefaultOutgoingResponseFormat = WebMessageFormat.Json,
+            //    FaultExceptionEnabled = true,
+            //});
 
             //// step one - find and remove default endpoint behavior 
             //var defaultCredentials = channelFactory.Endpoint.Behaviors.Find<ClientCredentials>();
@@ -101,6 +110,7 @@ namespace Restify.Services
             //{
             //    client.Abort();
             //}
+
             return clientFactory.CreateChannel();
         }
     }

@@ -13,7 +13,7 @@ namespace Testify
         {
             // *sign*
             
-            var baseUri = "http://localhost:80/testify";
+            var baseUri = "http://localhost:81/testify";
 
             if (args.Length > 0 && args[0] == "/Connect")
             {
@@ -62,11 +62,11 @@ namespace Testify
 
         private static void Connect(string baseUri)
         {
-            var factory = new ChannelFactory<IService1>(new WebHttpBinding(), new EndpointAddress(baseUri));
+            var factory = new ChannelFactory<IService1>(new WebHttpBinding(), new EndpointAddress("http://127.0.0.1:8888/testify"));
             factory.Endpoint.Behaviors.Add(new WebHttpBehavior());
 
             var service = factory.CreateChannel();
-            service.DoWork();
+            service.DoWork(new TestObject { TestValue = "testing..." });
         }
     }
 }
