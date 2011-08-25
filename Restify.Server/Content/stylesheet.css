@@ -12,17 +12,27 @@ h1 > .subtitle { font-size: 11pt; line-height: 11pt; color: gray; margin-top: 0;
 
 #spotify-core-statement 
 {
-    position: absolute;
+    position: fixed;
+    /*
     left: 32px;
     bottom: 50px;
+    margin-right: 192px;
+    */
+    right: 32px;
+    bottom: 192px;
+    width: 128px;
     color: gray;
     font-size: 9pt;
 }
 
 #form-login 
 {
-    margin: 0 auto;
+    position: absolute;
     width: 300px;
+    left: 50%;
+    margin-left: -150px;
+    top: 50%;
+    margin-top: -250px;
     border: solid 1px #ccc;
     border-radius: 3px;
     padding: 16px;
@@ -45,3 +55,6 @@ ul.form > li > input
 }
 
 input[type=text], input[type=password] { width: 180px; }
+
+#playlists { float: left; }
+#tracks { float: left; }

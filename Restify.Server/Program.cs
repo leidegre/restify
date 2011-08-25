@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -8,14 +11,12 @@ using System.ServiceModel.Description;
 using System.Text;
 using System.Threading;
 using Restify.Services;
-using System.Collections.Concurrent;
 using Restify.Threading;
-using System.Diagnostics;
-using System.ComponentModel;
+using System.ServiceModel.Web;
 
 namespace Restify
 {
-    class Program
+    public class Program
     {
         [DllImport("kernel32.dll")]
         extern static IntPtr GetConsoleWindow();
@@ -78,7 +79,7 @@ namespace Restify
             if (string.IsNullOrEmpty(instanceName))
             {
                 // run front end and gateway
-                return Run();
+                return RunServer();
             }
             else
             {
@@ -98,7 +99,7 @@ namespace Restify
             MessageQueue.PostSynchronized(msg);
         }
 
-        private static int Run()
+        public static int RunServer()
         {
             MessageQueue = new MessageQueue();
 
@@ -145,7 +146,7 @@ namespace Restify
 
         public static string InstanceName { get; private set; }
 
-        private static int RunInstance(string instanceName)
+        public static int RunInstance(string instanceName)
         {
             var exitCode = 0;
             using (var serviceHost = new ServiceHost(typeof(BackEndService)))
@@ -154,9 +155,9 @@ namespace Restify
                 {
                     InstanceName = instanceName;
 
-                    var baseUri = "http://localhost:81/restify/user/" + instanceName;
+                    var baseUri = "http://localhost/restify/user/" + instanceName;
 
-                    var endPoint = serviceHost.AddServiceEndpoint(typeof(IBackEndService), new WebHttpBinding(), baseUri);
+                    var endPoint = serviceHost.AddServiceEndpoint(typeof(IBackEndService), new WebHttpBinding { }, baseUri);
                     
                     endPoint.Behaviors.Add(new WebHttpBehavior {
                         DefaultBodyStyle = System.ServiceModel.Web.WebMessageBodyStyle.Bare,

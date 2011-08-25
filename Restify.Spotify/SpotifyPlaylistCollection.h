@@ -26,9 +26,10 @@ namespace Restify
             void playlist_added(sp_playlist *pl, int position);
             void playlist_removed(sp_playlist *pl, int position);
             void playlist_state_changed(sp_playlist *pl);
+            void playlist_metadata_updated(sp_playlist *pl);
 
-            void tracks_added(sp_playlist *pl, sp_track * const *tracks, int num_tracks, int position);
-            void tracks_removed(sp_playlist *pl, const int *tracks, int num_tracks);
+            void Spotify_tracks_added(sp_playlist *pl, sp_track * const *tracks, int num_tracks, int position);
+            void Spotify_tracks_removed(sp_playlist *pl, const int *tracks, int num_tracks);
 
             sp_playlistcontainer *get_pl_container() { return _pl_container; }
 

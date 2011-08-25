@@ -68,8 +68,6 @@ namespace Restify
             
             bool _is_stop_pending;
 
-            SpotifyTrack ^_track;
-
             // all asynchronous work is synchronized through primitives in this queue
             ConcurrentQueue<ISpotifyAction ^> ^_synq;
 
@@ -81,6 +79,12 @@ namespace Restify
             
             SpotifyGetPlaylistCollectionAction ^_getPlaylistCollection;
             SpotifyPlaylistCollection ^_pl_container;
+            
+            sp_track *_trackToLoad, *_trackNowPlaying;
+
+            ConcurrentQueue<String ^> ^_playQueue;
+
+            void Spotify_end_of_track();
 
         internal:
             HWAVEOUT _waveOut;
@@ -128,6 +132,9 @@ namespace Restify
             void Shutdown();
 
             void Play(SpotifyTrack ^track);
+            void PlayLink(String ^trackId);
+
+            void EnqueueLink(String ^trackId);
         };
     }
 }

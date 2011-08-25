@@ -31,6 +31,20 @@ using namespace System::Runtime::InteropServices;
 array<Byte> ^StringToSpString(String ^s);
 String ^SpStringToString(const char *s);
 
+ref class IntPtrEqualityComparer : IEqualityComparer<IntPtr>
+{
+public:
+    virtual int GetHashCode(IntPtr x)
+    {
+        return x.ToInt32();
+    }
+    
+    virtual bool Equals(IntPtr x, IntPtr y)
+    {
+        return x.ToInt32() == y.ToInt32();
+    }
+};
+
 namespace Restify
 {
     namespace Client

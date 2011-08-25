@@ -5,9 +5,8 @@ using System.Text;
 
 namespace Restify.Services
 {
-    public class RestifyLoginRequest
+    public class RestifyTrackRequest
     {
-        public string UserName { get; set; }
-        public string Password { get; set; }
+        public string Id { get; set; }
     }
 }

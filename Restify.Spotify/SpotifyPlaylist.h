@@ -19,6 +19,7 @@ namespace Restify
             
             String ^_id;
             String ^_title;
+            bool _is_collaborative;
 
         internal:
              SpotifyPlaylist(sp_playlist *pl);
@@ -26,15 +27,20 @@ namespace Restify
 
              sp_playlist *get_playlist() { return _pl; }
              
-             void Load();
-
-             void Add(sp_track *track);
-             void Remove(sp_track *track);
+             void Spotify_playlist_state_changed();
+             void Spotify_playlist_metadata_updated();
+             void Spotify_tracks_added(sp_track * const *tracks, int num_tracks, int position);
+             void Spotify_tracks_removed(const int *tracks, int num_tracks);
 
         public:
             property bool IsLoaded 
             { 
                 bool get() { return _isLoaded; } 
+            }
+
+            property bool IsCollaborative
+            { 
+                bool get() { return _is_collaborative; }
             }
 
             property int Count

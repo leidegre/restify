@@ -5,6 +5,11 @@ namespace Restify
 {
     namespace Client
     {
+        gcroot<SpotifySession ^> GetSpotifySession(sp_session* s)
+        {
+            return *static_cast<gcroot<SpotifySession ^> *>(sp_session_userdata(s));
+        }
+
         void SP_CALLCONV Spotify_logged_in(sp_session *session, sp_error error)
         {
             trace("[%u] Spotify_logged_in: %s\r\n", GetCurrentThreadId(), sp_error_message(error));
@@ -34,19 +39,15 @@ namespace Restify
             trace("[%u] Spotify_metadata_updated\r\n", GetCurrentThreadId());
         }
 
-        void SP_CALLCONV Spotify_end_of_track(sp_session *session)
+        void SP_CALLCONV end_of_track(sp_session *session)
         {
-            trace("[%u] Spotify_end_of_track\r\n", GetCurrentThreadId());
+            trace("[%u] end_of_track\r\n", GetCurrentThreadId());
+            GetSpotifySession(session)->Spotify_end_of_track();
         }
 
         void SP_CALLCONV Spotify_play_token_lost(sp_session *session)
         {
             trace("[%u] Spotify_play_token_lost\r\n", GetCurrentThreadId());
-        }
-
-        gcroot<SpotifySession ^> GetSpotifySession(sp_session* s)
-        {
-            return *static_cast<gcroot<SpotifySession ^> *>(sp_session_userdata(s));
         }
 
         SpotifySession::SpotifySession()
@@ -58,6 +59,7 @@ namespace Restify
             _session = nullptr;
             _is_stop_pending = false;
             _synq = gcnew ConcurrentQueue<ISpotifyAction ^>();
+            _playQueue = gcnew ConcurrentQueue<String ^>();
 
             // wait primitives
             _loggedInEvent = gcnew ManualResetEventSlim(false);
@@ -107,7 +109,7 @@ namespace Restify
             _callbacks->notify_main_thread = &Spotify_notify_main_thread;
             _callbacks->music_delivery = &Spotify_music_delivery;
             _callbacks->metadata_updated = &Spotify_metadata_updated;
-            _callbacks->end_of_track = &Spotify_end_of_track;
+            _callbacks->end_of_track = &end_of_track;
             _callbacks->play_token_lost = &Spotify_play_token_lost;
 
             sp_session *session;
@@ -125,13 +127,17 @@ namespace Restify
         bool SpotifySession::Login(String ^user, String ^pass)
         {
             LOCK(this); // no concurrency
-            _loggedInEvent->Reset();
-            Do(gcnew SpotifyLoginAction(user, pass));
-            if (!_loggedInEvent->Wait(DefaultTimeout))
+            if (!IsLoggedIn)
             {
-                throw gcnew TimeoutException();
+                _loggedInEvent->Reset();
+                Do(gcnew SpotifyLoginAction(user, pass));
+                if (!_loggedInEvent->Wait(DefaultTimeout))
+                {
+                    throw gcnew TimeoutException();
+                }
+                return _loggedInError == SP_ERROR_OK;
             }
-            return _loggedInError == SP_ERROR_OK;
+            return true;
         }
 
         void SpotifySession::Logout()
@@ -165,7 +171,26 @@ namespace Restify
 
         void SpotifySession::Play(SpotifyTrack ^track)
         {
-            //_track = track;
+            if (track == nullptr)
+                throw gcnew ArgumentNullException(L"track");
+            Do(gcnew SpotifyPlayAction(track));
+        }
+
+        void SpotifySession::PlayLink(String ^trackId)
+        {
+            if (String::IsNullOrEmpty(trackId))
+                throw gcnew ArgumentNullException(L"trackId");
+            Do(gcnew SpotifyPlayLinkAction(trackId));
+        }
+
+        void SpotifySession::EnqueueLink(String ^trackId)
+        {
+            if (String::IsNullOrEmpty(trackId))
+                throw gcnew ArgumentNullException(L"trackId");
+            if (_trackNowPlaying == nullptr)
+                PlayLink(trackId);
+            else
+                _playQueue->Enqueue(trackId);
         }
 
         // THIS IS BASED ON THE JUKEBOX SAMPLE PROVIDED IN THE libspotify DISTRIBUTION
@@ -213,6 +238,10 @@ namespace Restify
 
                 Monitor::Enter(_syncRoot);
             }
+            
+            sp_session_release(_session);
+            
+            _session = nullptr;
         }
 
         void SpotifySession::RunLockStep()
@@ -225,19 +254,42 @@ namespace Restify
                 op->Do(this);
             }
 
-            // Check pending stuff
-            //if (_track != nullptr && sp_track_is_available(_session, _track->get_track()))
-            //{
-            //    sp_session_player_unload(_session);
-            //    sp_error error;
-            //    error = sp_session_player_load(_session, _track->get_track());
-            //    if (error != SP_ERROR_OK)
-            //    {
-            //        throw gcnew SpotifyException(error);
-            //    }
-            //    sp_session_player_play(_session, 1);
-            //    _track = nullptr;
-            //}
+            // Play queue
+
+            if (_trackToLoad && _trackToLoad != _trackNowPlaying)
+            {
+                sp_session_player_unload(_session);
+                _trackNowPlaying = nullptr;
+            }
+
+            if (!_trackToLoad)
+                return;
+
+            if (!sp_track_is_available(_session, _trackToLoad))
+                return;
+
+            if (_trackToLoad == _trackNowPlaying)
+                return;
+
+            _trackNowPlaying = _trackToLoad;
+            
+            sp_session_player_load(_session, _trackToLoad);
+            sp_session_player_play(_session, 1);
+
+            _trackToLoad = nullptr;
         }
+
+        // <callbacks>
+
+        void SpotifySession::Spotify_end_of_track()
+        {
+            String ^trackId;
+            if (_playQueue->TryDequeue(trackId))
+            {
+                PlayLink(trackId);
+            }
+        }
+        
+        // </callbacks>
     }
 }

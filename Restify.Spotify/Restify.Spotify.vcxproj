@@ -76,6 +76,7 @@
     <ClCompile Include="SpotifyPlaylistCollection.cpp" />
     <ClCompile Include="SpotifySession.cpp" />
     <ClCompile Include="SpotifySessionWaveform.cpp" />
+    <ClCompile Include="SpotifyTrack.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="SpotifyAsync.h" />

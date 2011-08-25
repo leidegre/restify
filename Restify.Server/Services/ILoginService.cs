@@ -13,10 +13,10 @@ namespace Restify.Services
     {
         [OperationContract]
         [WebInvoke(UriTemplate = "/status", RequestFormat = WebMessageFormat.Json, ResponseFormat = WebMessageFormat.Json)]
-        RestifyLoginResponse Query(RestifyLogin login);
+        RestifyLoginResponse Query(RestifyLoginRequest login);
 
         [OperationContract]
         [WebInvoke(UriTemplate = "/login", RequestFormat = WebMessageFormat.Json, ResponseFormat = WebMessageFormat.Json)]
-        RestifyLoginResponse Login(RestifyLogin login);
+        RestifyLoginResponse Login(RestifyLoginRequest login);
     }
 }

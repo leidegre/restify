@@ -15,7 +15,7 @@
     </noscript>
 
     <div id="form-login" data-bind="visible: !loginInfo.isLoggedIn()">
-        <h1>RESTify<br /><small class="subtitle">A Spotify REST API for fun</small></h1>
+        <h1>RESTify<br /><small class="subtitle">A Spotify REST API that happens to run in your browser ;)</small></h1>
         <form data-bind="submit: loginInfo.submit.bind(loginInfo)">
             <ul class="form">
                 <li><label>user:</label></li>
@@ -30,16 +30,55 @@
         </form>
     </div>
 
+    <div id="playlists">
+    
+        <button type="button" data-bind="click: init">Refresh</button>
+
+        <ul data-bind="template: { name: 'playlistsTemplate', foreach: playlists }" />
+
+        <script id="playlistsTemplate" type="text/html">
+            <li>
+                <a href="#" data-bind="click: show"><span>${title()}</span></a>
+            </li>
+        </script>
+
+    </div>
+
+    <div id="tracks">
+    
+        <table data-bind="visible: playlist()">
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Length</th>
+                    <td></td>
+                </tr>
+            </thead>
+            <tbody data-bind="template: { name: 'tracksTemplate', foreach: tracks }" />
+        </table>
+
+        <script id="tracksTemplate" type="text/html">
+            <tr>
+                <td><a href="#" data-bind="click: play">${title}</a></td>
+                <td>${length}</td>
+                <td><button type="button" data-bind="click: enqueue">Enqueue</button></td>
+            </tr>      
+        </script>
+
+
+    </div>
+
+    <div style="clear:both;"></div>
+
     <footer id="spotify-core-statement">
-        This product uses SPOTIFY(R) CORE but is not endorsed, certified or otherwise approved in any way by <a href="http://www.spotify.com">Spotify</a>. <br />
+        This product uses SPOTIFY(R) CORE but is not endorsed, <br />certified or otherwise approved in any way by <a href="http://www.spotify.com">Spotify</a>. <br /><br />
         <a href="http://www.spotify.com">Spotify</a> is the registered trade mark of the Spotify Group.
     </footer>
 
     <script type="text/javascript">
 
-        function restifyLoginViewModel() {
+        function restifyLoginViewModel(parentViewModel) {
             this.isLoggedIn = ko.observable(false);
-            this.instanceName = "";
             this.user = ko.observable("");
             this.pass = ko.observable("");
             this.keepMeLoggedIn = ko.observable(false);
@@ -48,29 +87,86 @@
                 $.postJSON("/restify/auth/login", {
                     UserName: this.user(),
                     Password: this.pass(),
-                    KeepMeLoggedIn: this.keepMeLoggedIn(),
+                    KeepMeLoggedIn: this.keepMeLoggedIn()
                 }, function (data) {
                     self.isLoggedIn(data.IsLoggedIn);
-                    self.instanceName = data.InstanceName;
+                    if (data.IsLoggedIn) {
+                        window.viewModel.instanceName = data.InstanceName;
+                        parentViewModel.init();
+                    }
                 });
             }
         }
 
-        function restifyViewModel() {
-            
-            this.isLoggedIn = ko.observable(true);
-
-            this.loginInfo = new restifyLoginViewModel();
-
-            var self = this;
-            $.postJSON("/restify/auth/status", {
-                UserName: self.loginInfo.user()
-            }, function (data) {
-                self.isLoggedIn(data.IsLoggedIn);
-            });
+        function restifySessionViewModel() {
         }
 
-        ko.applyBindings(new restifyViewModel());
+        function trackItem(item) {
+            this.id = item.Id;
+            this.title = item.Title;
+            this.length = item.Length;
+            this.play = function () {
+                $.postJSON("/restify/user/" + window.viewModel.instanceName + "/play", {
+                    Id: this.id
+                });
+            }
+            this.enqueue = function () {
+                $.postJSON("/restify/user/" + window.viewModel.instanceName + "/enqueue", {
+                    Id: this.id
+                });
+            }
+        }
+
+        function playlistItem(item) {
+            var self = this;
+            this.id = ko.observable(item.Id);
+            this.title = ko.observable(item.Title);
+            this.count = ko.observable(item.Count);
+            this.show = function () {
+                $.postJSON("/restify/user/" + window.viewModel.instanceName + "/playlist", {
+                    Id: this.id()
+                }, function (data) {
+                    var tracks = $.map(data, function (item) {
+                        return new trackItem(item)
+                    });
+                    window.viewModel.tracks(tracks);
+                });
+                window.viewModel.playlist(this);
+            }
+        }
+
+        function restifyViewModel() {
+
+            var self = this;
+
+            this.instanceName = null;
+
+            this.loginInfo = new restifyLoginViewModel(self);
+
+            this.playlists = ko.observableArray([]);
+            this.playlist = ko.observable(null);
+            
+            this.tracks = ko.observableArray([]);
+
+            this.init = function () {
+                $.postJSON("/restify/user/" + this.instanceName + "/playlists", undefined, function (data) {
+                    var playlists = $.map(data, function (item) {
+                        return new playlistItem(item)
+                    });
+                    self.playlists(playlists);
+                });
+            }
+
+//            var self = this;
+//            $.postJSON("/restify/auth/status", {
+//                UserName: self.loginInfo.user()
+//            }, function (data) {
+//                self.isLoggedIn(data.IsLoggedIn);
+//            });
+        }
+
+        window.viewModel = new restifyViewModel();
+        ko.applyBindings(window.viewModel);
 
     </script>
 

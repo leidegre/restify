@@ -6,7 +6,7 @@
                 type: "POST",
                 url: url,
                 contentType: "application/json; charset=utf-8",
-                data: JSON.stringify(data),
+                data: data ? JSON.stringify(data) : null,
                 success: callback,
                 dataType: type
             });

@@ -7,46 +7,74 @@ namespace Restify
     {
         SpotifyPlaylist::SpotifyPlaylist(sp_playlist *pl)
             : _pl(pl)
-            , _list(gcnew ConcurrentDictionary<IntPtr, SpotifyTrack ^>())
+            , _list(gcnew ConcurrentDictionary<IntPtr, SpotifyTrack ^>(gcnew IntPtrEqualityComparer()))
         {
+            trace("Spotify: (0x%8x) playlist\r\n", pl);
+            for (int i = 0; i < sp_playlist_num_tracks(_pl); i++)
+            {
+                auto track = sp_playlist_track(_pl, i);
+                _list->TryAdd(IntPtr(track), gcnew SpotifyTrack(track));
+            }
         }
 
         SpotifyPlaylist::~SpotifyPlaylist()
         {
         }
 
-        void SpotifyPlaylist::Add(sp_track *track)
+        void SpotifyPlaylist::Spotify_tracks_added(sp_track * const *tracks, int num_tracks, int position)
         {
-            _list->TryAdd(IntPtr(track), gcnew SpotifyTrack(track));
+            for (int i = 0; i < num_tracks; i++)
+            {
+                _list->TryAdd(IntPtr(tracks[i]), gcnew SpotifyTrack(tracks[i]));
+            }
         }
         
-        void SpotifyPlaylist::Remove(sp_track *track)
+        void SpotifyPlaylist::Spotify_tracks_removed(const int *tracks, int num_tracks)
         {
-            SpotifyTrack ^trackObject;
-            _list->TryRemove(IntPtr(track), trackObject);
+            for (int i = 0; i < num_tracks; i++)
+            {
+                SpotifyTrack ^trackObject;
+                _list->TryRemove(IntPtr(tracks[i]), trackObject);
+            }
         }
 
-        void SpotifyPlaylist::Load()
+        void SpotifyPlaylist::Spotify_playlist_state_changed()
         {
-            auto link = sp_link_create_from_playlist(_pl);
-            if (link)
+            if (sp_playlist_is_loaded(_pl))
             {
-                auto link_buffer_size = sp_link_as_string(link, nullptr, 0);
-                if (link_buffer_size > 0)
+                if (_id == nullptr)
                 {
-                    auto s = new char[link_buffer_size + 1];
+                    auto link = sp_link_create_from_playlist(_pl);
+                    if (link)
+                    {
+                        auto link_buffer_size = sp_link_as_string(link, nullptr, 0);
+                        if (link_buffer_size > 0)
+                        {
+                            auto s = new char[link_buffer_size + 1];
 
-                    if (sp_link_as_string(link, s, link_buffer_size + 1) > 0)
-                        _id = gcnew String(s);
+                            if (sp_link_as_string(link, s, link_buffer_size + 1) > 0)
+                                _id = gcnew String(s);
 
-                    delete[] s;
+                            delete[] s;
+                        }
+                        sp_link_release(link);
+                    }
+
+                    _title = SpStringToString(sp_playlist_name(_pl));
                 }
-                sp_link_release(link);
+                
+                _isLoaded = true;
             }
             
-            _title = SpStringToString(sp_playlist_name(_pl));
+            _is_collaborative = sp_playlist_is_collaborative(_pl);
+        }
 
-            _isLoaded = true;
+        void SpotifyPlaylist::Spotify_playlist_metadata_updated()
+        {
+            for each (KeyValuePair<IntPtr, SpotifyTrack ^> item in _list)
+            {
+                item.Value->Nudge();
+            }
         }
 
         List<SpotifyTrack ^> ^SpotifyPlaylist::ToList()

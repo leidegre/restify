@@ -23,9 +23,12 @@ namespace Restify.Services
         private Mutex instance;
 
         public SpotifyInstance(string userName)
+            : this(userName, Guid.NewGuid().ToString())
         {
-            var instanceName = Guid.NewGuid().ToString();
+        }
 
+        public SpotifyInstance(string userName, string instanceName)
+        {
             var mutex = new CreateMutexMessage(string.Format(GlobalWaitInstanceFormatString, instanceName));
 
             // if a mutex is acquired by a thread that later exits
@@ -74,14 +77,14 @@ namespace Restify.Services
 
         public void Initialize()
         {
-            clientFactory = new ChannelFactory<IBackEndService>(new WebHttpBinding(), new EndpointAddress("http://localhost:81/restify/user/" + InstanceName));
-            clientFactory.Endpoint.Behaviors.Add(new WebHttpBehavior {
-                AutomaticFormatSelectionEnabled = false,
-                DefaultBodyStyle = WebMessageBodyStyle.Bare,
-                DefaultOutgoingRequestFormat = WebMessageFormat.Json,
-                DefaultOutgoingResponseFormat = WebMessageFormat.Json,
-                FaultExceptionEnabled = true,
-            });
+            //clientFactory = new ChannelFactory<IBackEndService>(new WebHttpBinding(), new EndpointAddress("http://localhost/restify/user/" + InstanceName));
+            //clientFactory.Endpoint.Behaviors.Add(new WebHttpBehavior {
+            //    AutomaticFormatSelectionEnabled = false,
+            //    DefaultBodyStyle = WebMessageBodyStyle.Bare,
+            //    DefaultOutgoingRequestFormat = WebMessageFormat.Json,
+            //    DefaultOutgoingResponseFormat = WebMessageFormat.Json,
+            //    FaultExceptionEnabled = true,
+            //});
 
             //// step one - find and remove default endpoint behavior 
             //var defaultCredentials = channelFactory.Endpoint.Behaviors.Find<ClientCredentials>();
@@ -96,9 +99,9 @@ namespace Restify.Services
             //channelFactory.Endpoint.Behaviors.Add(loginCredentials); //add required ones
         }
 
-        public IBackEndService CreateProxy()
+        public BackEndServiceClient CreateClient()
         {
-            return clientFactory.CreateChannel();
+            return new BackEndServiceClient("http://localhost/restify/user/" + InstanceName);
         }
     }
 }

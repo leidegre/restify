@@ -75,5 +75,47 @@ namespace Restify
 
             virtual void Do(SpotifySession ^session) override;
         };
+
+        ref class SpotifyPlaylistMetadataUpdateAction : ISpotifyAction
+        {
+        private:
+            SpotifyPlaylist ^_pl;
+
+        public:
+            SpotifyPlaylistMetadataUpdateAction(SpotifyPlaylist ^pl)
+                : _pl(pl)
+            {
+            }
+
+            virtual void Do(SpotifySession ^session) override;
+        };
+
+        ref class SpotifyPlayAction : ISpotifyAction
+        {
+        private:
+            SpotifyTrack ^_track;
+
+        public:
+            SpotifyPlayAction(SpotifyTrack ^track)
+                : _track(track)
+            {
+            }
+
+            virtual void Do(SpotifySession ^session) override;
+        };
+
+        ref class SpotifyPlayLinkAction : ISpotifyAction
+        {
+        private:
+            String ^_trackId;
+
+        public:
+            SpotifyPlayLinkAction(String ^trackId)
+                : _trackId(trackId)
+            {
+            }
+
+            virtual void Do(SpotifySession ^session) override;
+        };
     }
 }

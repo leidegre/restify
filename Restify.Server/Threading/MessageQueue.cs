@@ -71,7 +71,7 @@ namespace Restify.Threading
 #if DEBUG
             if (GetCurrentThreadId() == messageLoopThreadId)
             {
-                throw new InvalidOperationException("Cannot post message from thread that is running the message loop. This can result in a deadlock.");
+                throw new InvalidOperationException("Cannot post message from thread that is running the message loop. This will result a deadlock.");
             }
 #endif
             if (msg == null)

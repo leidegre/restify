@@ -12,15 +12,27 @@ namespace Restify.Services
     public interface IBackEndService
     {
         [OperationContract]
-        [WebInvoke(UriTemplate = "/is-logged-in", RequestFormat = WebMessageFormat.Json, ResponseFormat = WebMessageFormat.Json)]
-        RestifyLoginResponse IsLoggedIn(RestifyLogin login);
+        [WebInvoke(UriTemplate = "/is-logged-in")]
+        RestifyLoginResponse IsLoggedIn(RestifyLoginRequest login);
 
         [OperationContract]
-        [WebInvoke(UriTemplate = "/login", RequestFormat = WebMessageFormat.Json, ResponseFormat = WebMessageFormat.Json)]
-        RestifyLoginResponse Login(RestifyLogin login);
+        [WebInvoke(UriTemplate = "/login")]
+        RestifyLoginResponse Login(RestifyLoginRequest login);
 
         [OperationContract]
-        [WebGet(UriTemplate = "/playlists", ResponseFormat = WebMessageFormat.Json)]
+        [WebInvoke(UriTemplate = "/playlists")]
         List<RestifyPlaylist> GetPlaylists();
+
+        [OperationContract]
+        [WebInvoke(UriTemplate = "/playlist")]
+        List<RestifyTrack> GetPlaylist(RestifyPlaylistRequest playlist);
+
+        [OperationContract]
+        [WebInvoke(UriTemplate = "/play")]
+        void Play(RestifyTrackRequest track);
+
+        [OperationContract]
+        [WebInvoke(UriTemplate = "/enqueue")]
+        void Enqueue(RestifyTrackRequest track);
     }
 }
