@@ -1,29 +1,26 @@
 
+# ignore external sensitive data
 spotify_appkey.key
+spotify_user
 
+# ignore IntelliSense database
 Restify.opensdf
 Restify.sdf
 
+# ignore built outputs from these directories
 Debug/*
 Release/*
-
-Restify.Server/bin/*
-Restify.Server/obj/*
-
-Restify.Spotify/Debug/*
-Restify.Spotify/Release/*
-Restify.Spotify/*.user
-
-*.suo
-
-Restify.Server/*.csproj.user
-
-Testify/bin/*
-Testify/obj/*
-Testify/*.csproj.user
-
-_ReSharper.*/*
-*.ReSharper.user
+*/Debug/*
+*/Release/*
 */bin/*
 */obj/*
+
+# ignore project user settings
+*.suo
 */*.csproj.user
+*/*.vcxproj.user
+
+# ignore ReSharper
+_ReSharper.*/*
+*.ReSharper.user
+
