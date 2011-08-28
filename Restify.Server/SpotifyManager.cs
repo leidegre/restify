@@ -61,7 +61,7 @@ namespace Restify
 
             _session.Initialize(appkey);
 
-            ThreadPool.QueueUserWorkItem(_ => _session.Run());
+            ThreadPool.QueueUserWorkItem(_ => _session.RunMessageLoop());
         }
 
         public static string FindFile(string fileName)
@@ -79,37 +79,57 @@ namespace Restify
             return null;
         }
 
-        public bool IsLoggedIn { get { return _session.IsLoggedIn; } }
+        public bool IsLoggedIn { get; private set; }
 
         public bool Login(string user, string pass)
         {
-            return _session.Login(user, pass);
+            lock (_session)
+            {
+                if (IsLoggedIn)
+                    return true;
+
+                SpotifyError error = SpotifyError.BadUsernameOrPassword;
+
+                using (var wait = new ManualResetEventSlim())
+                {
+                    Action<SpotifyError> loggedIn = err => {
+                        error = err;
+                        wait.Set();
+                    };
+                    
+                    _session.LoggedIn += loggedIn;
+                    
+                    _session.Post(() => {
+                        _session.Login(user, pass);
+                    });
+
+                    wait.Wait();
+                    
+                    _session.LoggedIn -= loggedIn;
+                }
+
+                IsLoggedIn = error == SpotifyError.Ok;
+
+                return IsLoggedIn;
+            }
         }
 
         public List<SpotifyPlaylist> GetPlaylists()
         {
-            return _session.GetPlaylistCollection();
+            return null;
         }
 
         public SpotifyPlaylist GetPlaylist(string id)
         {
-            var list = _session.GetPlaylistCollection();
-            foreach (var pl in list)
-            {
-                if (pl.Id == id)
-                    return pl;
-            }
             return null;
         }
 
         public void Play(string id)
         {
-            _session.PlayLink(id);
         }
 
         public void Enqueue(string id)
         {
-            _session.EnqueueLink(id);
         }
     }
 }

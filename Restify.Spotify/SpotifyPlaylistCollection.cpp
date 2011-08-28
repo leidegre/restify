@@ -114,9 +114,9 @@ namespace Restify
 
         void SpotifyPlaylistCollection::container_loaded()
         {
-            auto handle = _session->_getPlaylistCollection;
-            if (handle != nullptr)
-                handle->Set();
+            //auto handle = _session->_getPlaylistCollection;
+            //if (handle != nullptr)
+            //    handle->Set();
         }
 
         void SpotifyPlaylistCollection::playlist_added(sp_playlist *pl, int position)
@@ -133,20 +133,20 @@ namespace Restify
 
         void SpotifyPlaylistCollection::playlist_state_changed(sp_playlist *pl)
         {
-            SpotifyPlaylist ^plObject;
-            if (_list->TryGetValue(IntPtr(pl), plObject))
-            {
-                _session->Do(gcnew SpotifyPlaylistStateChangeAction(plObject));
-            }
+            //SpotifyPlaylist ^plObject;
+            //if (_list->TryGetValue(IntPtr(pl), plObject))
+            //{
+            //    _session->Do(gcnew SpotifyPlaylistStateChangeAction(plObject));
+            //}
         }
 
         void SpotifyPlaylistCollection::playlist_metadata_updated(sp_playlist *pl)
         {
-            SpotifyPlaylist ^plObject;
-            if (_list->TryGetValue(IntPtr(pl), plObject))
-            {
-                _session->Do(gcnew SpotifyPlaylistMetadataUpdateAction(plObject));
-            }
+            //SpotifyPlaylist ^plObject;
+            //if (_list->TryGetValue(IntPtr(pl), plObject))
+            //{
+            //    _session->Do(gcnew SpotifyPlaylistMetadataUpdateAction(plObject));
+            //}
         }
 
         void SpotifyPlaylistCollection::Spotify_tracks_added(sp_playlist *pl, sp_track * const *tracks, int num_tracks, int position)

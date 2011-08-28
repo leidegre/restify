@@ -15,6 +15,7 @@ namespace Restify.Services
     public class LoginService : ILoginService
     {
         internal static Dictionary<string, SpotifyInstance> userMapping = new Dictionary<string, SpotifyInstance>(StringComparer.OrdinalIgnoreCase);
+        internal static Dictionary<string, SpotifyInstance> userInstanceMapping = new Dictionary<string, SpotifyInstance>(StringComparer.Ordinal);
 
         static LoginService()
         {
@@ -41,6 +42,7 @@ namespace Restify.Services
                 {
                     var instance = new SpotifyInstance(credentials[0], "default");
                     userMapping.Add(credentials[0], instance);
+                    userInstanceMapping.Add(instance.InstanceName, instance);
                     if (credentials.Length > 1)
                     {
                         var client = instance.CreateClient();
@@ -102,6 +104,7 @@ namespace Restify.Services
                 if (!userMapping.TryGetValue(userName, out backEndService))
                 {
                     userMapping.Add(userName, backEndService = CreateSpotifyClient(userName));
+                    userInstanceMapping.Add(backEndService.InstanceName, backEndService);
                 }
             }
             return backEndService;

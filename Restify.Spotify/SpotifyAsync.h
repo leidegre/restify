@@ -39,6 +39,23 @@ namespace Restify
             virtual void Do(SpotifySession ^session) = 0;
         };
 
+        ref class SpotifyAction : ISpotifyAction
+        {
+        private:
+            Action<SpotifySession ^> ^_action;
+        
+        public:
+            SpotifyAction(Action<SpotifySession ^> ^action)
+                : _action(action)
+            {
+            }
+            
+            virtual void Do(SpotifySession ^session) override
+            {
+                _action(session);
+            }
+        };
+
         ref class SpotifyLoginAction : ISpotifyAction
         {
         private:

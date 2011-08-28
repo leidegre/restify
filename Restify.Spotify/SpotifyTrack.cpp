@@ -24,7 +24,7 @@ namespace Restify
                     }
                     sp_link_release(link);
                 }
-                _title = SpStringToString(sp_track_name(_track));
+                _title = Unstringify(sp_track_name(_track));
                 _length = TimeSpan(TimeSpan::TicksPerMillisecond * sp_track_duration(_track));
                 _isLoaded = true;
             }

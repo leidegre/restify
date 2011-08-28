@@ -91,6 +91,7 @@
                 }, function (data) {
                     self.isLoggedIn(data.IsLoggedIn);
                     if (data.IsLoggedIn) {
+                        $.ajaxSetup({ headers: { "X-RESTify-Instance": data.InstanceName } });
                         window.viewModel.instanceName = data.InstanceName;
                         parentViewModel.init();
                     }
@@ -106,14 +107,12 @@
             this.title = item.Title;
             this.length = item.Length;
             this.play = function () {
-                $.postJSON("/restify/user/" + window.viewModel.instanceName + "/play", {
+                $.postJSON("/restify/gateway/play", {
                     Id: this.id
                 });
             }
             this.enqueue = function () {
-                $.postJSON("/restify/user/" + window.viewModel.instanceName + "/enqueue", {
-                    Id: this.id
-                });
+                $.JSON("PUT", "/restify/gateway/queue/" + encodeURIComponent(this.id));
             }
         }
 

@@ -7,8 +7,8 @@ namespace Restify
     {
         void SpotifyLoginAction::Do(SpotifySession ^session)
         {
-            pin_ptr<Byte> userString = &StringToSpString(_user)[0];
-            pin_ptr<Byte> passString = &StringToSpString(_pass)[0];
+            pin_ptr<Byte> userString = &Stringify(_user)[0];
+            pin_ptr<Byte> passString = &Stringify(_pass)[0];
             sp_session_login(session->get_session(), (const char *)userString, (const char *)passString);
         }
 
@@ -39,7 +39,7 @@ namespace Restify
 
         void SpotifyPlayLinkAction::Do(SpotifySession ^session)
         {
-            pin_ptr<Byte> s = &StringToSpString(_trackId)[0];
+            pin_ptr<Byte> s = &Stringify(_trackId)[0];
             sp_link *link = sp_link_create_from_string((const char *)s);
             if (link)
             {

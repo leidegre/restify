@@ -13,6 +13,8 @@ using System.Threading;
 using Restify.Services;
 using Restify.Threading;
 using System.ServiceModel.Web;
+using System.ServiceModel.Dispatcher;
+using System.ServiceModel.Channels;
 
 namespace Restify
 {
@@ -99,6 +101,46 @@ namespace Restify
             MessageQueue.PostSynchronized(msg);
         }
 
+        class AclDispatchMessageInspector : IDispatchMessageInspector
+        {
+            public object AfterReceiveRequest(ref System.ServiceModel.Channels.Message request, IClientChannel channel, InstanceContext instanceContext)
+            {
+                var instanceName = WebOperationContext.Current.IncomingRequest.Headers["X-RESTify-Instance"];
+                lock (LoginService.userMapping)
+                {
+                    if (!LoginService.userInstanceMapping.ContainsKey(instanceName))
+                    {
+                        throw new InvalidOperationException();
+                    }
+                }
+                return null;
+            }
+
+            public void BeforeSendReply(ref System.ServiceModel.Channels.Message reply, object correlationState)
+            {
+            }
+        }
+
+        class AclEndpointBehavior : IEndpointBehavior
+        {
+            public void AddBindingParameters(ServiceEndpoint endpoint, System.ServiceModel.Channels.BindingParameterCollection bindingParameters)
+            {
+            }
+
+            public void ApplyClientBehavior(ServiceEndpoint endpoint, System.ServiceModel.Dispatcher.ClientRuntime clientRuntime)
+            {
+            }
+
+            public void ApplyDispatchBehavior(ServiceEndpoint endpoint, System.ServiceModel.Dispatcher.EndpointDispatcher endpointDispatcher)
+            {
+                endpointDispatcher.DispatchRuntime.MessageInspectors.Add(new AclDispatchMessageInspector());
+            }
+
+            public void Validate(ServiceEndpoint endpoint)
+            {
+            }
+        }
+
         public static int RunServer()
         {
             MessageQueue = new MessageQueue();
@@ -108,7 +150,14 @@ namespace Restify
             var frontEndHost = new ServiceHost(typeof(FrontEndService));
             var frontEndBaseUri = "http://localhost/restify";
             var frontEndEndPoint = frontEndHost.AddServiceEndpoint(typeof(IFrontEndService), new WebHttpBinding(), frontEndBaseUri);
-            frontEndEndPoint.Behaviors.Add(new WebHttpBehavior());
+            frontEndEndPoint.Behaviors.Add(new WebHttpBehavior {
+                AutomaticFormatSelectionEnabled = false,
+                DefaultBodyStyle = WebMessageBodyStyle.Bare,
+                DefaultOutgoingRequestFormat = WebMessageFormat.Json,
+                DefaultOutgoingResponseFormat = WebMessageFormat.Json,
+                FaultExceptionEnabled = true,
+                HelpEnabled = true,
+            });
             frontEndHost.Open();
             
             Trace.WriteLine(frontEndBaseUri);
@@ -116,10 +165,35 @@ namespace Restify
             var loginHost = new ServiceHost(typeof(LoginService));
             var loginBaseUri = "http://localhost/restify/auth";
             var loginEndPoint = loginHost.AddServiceEndpoint(typeof(ILoginService), new WebHttpBinding(), loginBaseUri);
-            loginEndPoint.Behaviors.Add(new WebHttpBehavior());
+            loginEndPoint.Behaviors.Add(new WebHttpBehavior {
+                AutomaticFormatSelectionEnabled = false,
+                DefaultBodyStyle = WebMessageBodyStyle.Bare,
+                DefaultOutgoingRequestFormat = WebMessageFormat.Json,
+                DefaultOutgoingResponseFormat = WebMessageFormat.Json,
+                FaultExceptionEnabled = true,
+                HelpEnabled = true,
+            });
             loginHost.Open();
             
             Trace.WriteLine(loginBaseUri);
+
+            var gatewayHost = new ServiceHost(typeof(BackEndGatewayService));
+            var gatewayBaseUri = "http://localhost/restify/gateway";
+            var gatewayEndPoint = gatewayHost.AddServiceEndpoint(typeof(IBackEndService), new WebHttpBinding(), gatewayBaseUri);
+            gatewayEndPoint.Behaviors.Add(new WebHttpBehavior {
+                AutomaticFormatSelectionEnabled = false,
+                DefaultBodyStyle= WebMessageBodyStyle.Bare,
+                DefaultOutgoingRequestFormat = WebMessageFormat.Json,
+                DefaultOutgoingResponseFormat = WebMessageFormat.Json,
+                FaultExceptionEnabled = true,
+                HelpEnabled = true,
+            });
+            //gatewayEndPoint.Behaviors.Add(new AclEndpointBehavior());
+            gatewayHost.Open();
+
+            Trace.WriteLine(gatewayBaseUri);
+
+            //WebOperationContext.Current.IncomingRequest.Headers[GatewayHeaderName];
 
             Trace.WriteLine("OK");
 

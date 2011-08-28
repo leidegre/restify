@@ -8,6 +8,8 @@
 #define trace(fmt, ...) \
     { char __buf[1024]; _snprintf_s(__buf, 1024, fmt, __VA_ARGS__); OutputDebugStringA(__buf); printf("%s", __buf); }
 
+#include "waveform.h"
+
 #include <vcclr.h> // gcroot
 #include <msclr/lock.h> // lock
 
@@ -16,6 +18,9 @@
 
 #define LOCK(object) \
     msclr::lock CONCAT(lock__, __LINE__)(object)
+
+// import specific types
+typedef System::Diagnostics::Contracts::Contract Contract;
 
 using namespace System;
 using namespace System::Text;
@@ -27,9 +32,17 @@ using namespace System::Threading;
 
 using namespace System::Runtime::InteropServices;
 
-// Convert a managed Unicode string to a null-terminated c-style ANSI string
-array<Byte> ^StringToSpString(String ^s);
-String ^SpStringToString(const char *s);
+//
+//  Converts a managed Unicode character string to a c-style null-terminated UTF-8 `array<Byte> ^`
+//
+//  to pass the string to libspotify:
+//      pin_ptr<Byte> p = &Stringify(...)[0];
+//  and it works because Stringify will always return an array<Byte> ^ of length 1 
+//  (the empty, null terminated string)
+//  you then cast that pinned managed memory to the desirable pointer type (const char *)p
+//  and pass it to libspotify
+array<Byte> ^Stringify(String ^s);
+String ^Unstringify(const char *s);
 
 ref class IntPtrEqualityComparer : IEqualityComparer<IntPtr>
 {
@@ -79,10 +92,17 @@ namespace Restify
         ref class SpotifyPlaylist;
         ref class SpotifyPlaylistCollection;
         ref class SpotifySession;
+
+        public delegate void SpotifySessionEventHandler(SpotifySession^ sender);
+        public delegate void SpotifySessionErrorEventHandler(SpotifySession^ sender, SpotifyError error);
     }
 }
 
-#include "SpotifyAsync.h"
+//#include "Spotify.h"
+
+#include "SpotifyLink.h"
+
+//#include "SpotifyAsync.h"
 
 #include "SpotifyObservable.h"
 

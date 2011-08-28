@@ -68,9 +68,9 @@ namespace Restify.Services
             SpotifyManager.Current.Play(track.Id);
         }
 
-        public void Enqueue(RestifyTrackRequest track)
+        public void Enqueue(string trackId)
         {
-            SpotifyManager.Current.Enqueue(track.Id);
+            SpotifyManager.Current.Enqueue(trackId);
         }
     }
 }

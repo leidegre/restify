@@ -1,140 +1,85 @@
-#pragma once
 
 namespace Restify
 {
     namespace Client
     {
-        int SP_CALLCONV Spotify_music_delivery(sp_session *session, const sp_audioformat *format, const void *frames, int num_frames);
-
-        gcroot<SpotifySession ^> GetSpotifySession(sp_session* s);
-
-        public ref class SpotifyEventArgs : EventArgs
-        {
-        private:
-            sp_error _error;
-
-        internal:
-            SpotifyEventArgs(sp_error error)
-                : _error(error)
-            {
-            }
-
-        public:
-            property bool HasError
-            {
-                bool get()
-                {
-                    return _error != SP_ERROR_OK;
-                }
-            }
-
-            property String ^ErrorMessage
-            {
-                String ^get()
-                {
-                    return gcnew String(sp_error_message(_error));
-                }
-            }
-
-        };
-
-        public delegate void SpotifyEventHandler(SpotifySession^ sender, SpotifyEventArgs^ e);
-
-        public ref class SpotifySessionConfiguration
+        interface class ISpotifyMessage
         {
         public:
-            property array<Byte> ^ApplicationKey;
-            property String ^CacheLocation;
-            property String ^SettingsLocation;
+            void Invoke();
         };
 
         public ref class SpotifySession
         {
-        public:
-            static const int DefaultTimeout = 30 * 1000; 
-
         private:
-            Object ^_syncRoot;
-
-            gcroot<SpotifySession ^>* _this;
-
             sp_session_callbacks *_callbacks;
             sp_session_config *_config;
             sp_session *_session;
-
-            bool _notify_do;
             
-            void RunLockStep();
-            
-            bool _is_stop_pending;
+            Object ^_syncRoot;
+            ConcurrentQueue<ISpotifyMessage ^> ^_queue;
+            gcroot<SpotifySession ^> *_gcroot;
 
-            // all asynchronous work is synchronized through primitives in this queue
-            ConcurrentQueue<ISpotifyAction ^> ^_synq;
+            waveform_api *_waveform;
 
-        internal:
-            // NOTE: these should only be accessed through session callbacks
-            // these are basically callbacks slots
-            sp_error _loggedInError;
-            ManualResetEventSlim ^_loggedInEvent;
-            
-            SpotifyGetPlaylistCollectionAction ^_getPlaylistCollection;
-            SpotifyPlaylistCollection ^_pl_container;
-            
-            sp_track *_trackToLoad, *_trackNowPlaying;
-
-            ConcurrentQueue<String ^> ^_playQueue;
-
-            void Spotify_end_of_track();
-
-        internal:
-            HWAVEOUT _waveOut;
-
-            sp_session *get_session() 
+            void EnsureSession() 
             { 
                 if (_session == nullptr)
-                    throw gcnew InvalidOperationException("Must initialize Spotify session first.");
-                return _session; 
+                    throw gcnew InvalidOperationException(L"You have to initialize Spotify first."); 
             }
-            
-            void Do(ISpotifyAction ^op)
-            {
-                _synq->Enqueue(op);
-                Notify();
-            }
-
-            void Notify();
 
         public:
             SpotifySession();
             ~SpotifySession();
 
-            void Initialize(array<Byte> ^key);
+            bool Initialize(array<Byte> ^appKey);
 
-            property bool IsLoggedIn
+            void Login(String ^userName, String ^password);
+
+        internal:
+            void session_logged_in(sp_error error);
+            void session_logged_out();
+            void session_connection_error(sp_error error);
+            void session_notify_main_thread();
+            int session_music_delivery(const sp_audioformat *format, const void *frames, int num_frames);
+            void session_end_of_track();
+            void session_play_token_lost();
+
+        public:
+            event Action<SpotifyError> ^LoggedIn;
+            event Action ^LoggedOut;
+            event Action<SpotifyError> ^ConnectionError;
+            event Action ^EndOfTrack;
+            event Action ^PlayTokenLost;
+
+        private:
+            bool _hasMessageLoopNotification;
+            void NotifyMessageLoop();
+            
+            bool _stopMessageLoop;
+
+            static int _messageLoopThreadId;
+
+        public:
+            static bool HasAccess()
             {
-                bool get()
-                {
-                    if (_session != nullptr)
-                        return sp_session_user(_session) != nullptr;
-                    
-                    return false;
-                }
+                return _messageLoopThreadId == GetCurrentThreadId();
             }
 
-            bool Login(String ^user, String ^pass);
+            static void EnsureAccess()
+            {
+                if (!HasAccess())
+                    throw gcnew InvalidOperationException(L"The Spotify API has to be called through a single thread. If you need to access the Spotify API from a different thread, use Post or PostSynchronized.");
+            }
 
-            void Logout();
+            void Post(Action ^action);
+            void PostSynchronized(Action ^action);
 
-            List<SpotifyPlaylist ^> ^GetPlaylistCollection();
+            void RunMessageLoop();
+            void StopMessageLoop();
 
-            void Run();
-
-            void Shutdown();
-
-            void Play(SpotifyTrack ^track);
-            void PlayLink(String ^trackId);
-
-            void EnqueueLink(String ^trackId);
         };
+
+
     }
 }

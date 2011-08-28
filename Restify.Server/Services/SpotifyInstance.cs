@@ -103,5 +103,7 @@ namespace Restify.Services
         {
             return new BackEndServiceClient("http://localhost/restify/user/" + InstanceName);
         }
+
+        public bool IsMaster { get; set; }
     }
 }

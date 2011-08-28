@@ -60,7 +60,7 @@ namespace Restify
                         sp_link_release(link);
                     }
 
-                    _title = SpStringToString(sp_playlist_name(_pl));
+                    _title = Unstringify(sp_playlist_name(_pl));
                 }
                 
                 _isLoaded = true;

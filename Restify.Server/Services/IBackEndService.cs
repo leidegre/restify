@@ -32,7 +32,7 @@ namespace Restify.Services
         void Play(RestifyTrackRequest track);
 
         [OperationContract]
-        [WebInvoke(UriTemplate = "/enqueue")]
-        void Enqueue(RestifyTrackRequest track);
+        [WebInvoke(Method = "PUT", UriTemplate = "/queue/{trackId}")]
+        void Enqueue(string trackId);
     }
 }

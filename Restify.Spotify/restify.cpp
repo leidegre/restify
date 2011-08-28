@@ -1,7 +1,9 @@
 
 #include "restify.h"
 
-array<Byte> ^StringToSpString(String^ s)
+//[assembly: System::Runtime::CompilerServices::InternalsVisibleToAttribute(L"Restify.Server")];
+
+array<Byte> ^Stringify(String^ s)
 {
     if (s == nullptr || s->Length == 0)
     {
@@ -13,7 +15,7 @@ array<Byte> ^StringToSpString(String^ s)
     return cstr;
 }
 
-String ^SpStringToString(const char *s)
+String ^Unstringify(const char *s)
 {
     int byteCount = strlen(s);
     int charCount = Encoding::UTF8->GetCharCount((Byte *)const_cast<char *>(s), byteCount);

@@ -47,7 +47,6 @@ namespace Restify.Services
             throw new NotImplementedException();
         }
 
-
         public List<RestifyTrack> GetPlaylist(RestifyPlaylistRequest playlist)
         {
             throw new NotImplementedException();
@@ -55,12 +54,18 @@ namespace Restify.Services
 
         public void Play(RestifyTrackRequest track)
         {
-            throw new NotImplementedException();
+            using (new OperationContextScope(InnerChannel))
+            {
+                Channel.Play(track);
+            }
         }
 
-        public void Enqueue(RestifyTrackRequest track)
+        public void Enqueue(string trackId)
         {
-            throw new NotImplementedException();
+            using (new OperationContextScope(InnerChannel))
+            {
+                Channel.Enqueue(trackId);
+            }
         }
     }
 }
