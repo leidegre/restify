@@ -19,13 +19,15 @@ namespace Restify
             ConcurrentDictionary<IntPtr, SpotifyPlaylist ^> ^_list;
 
         internal:
-            SpotifyPlaylistCollection(SpotifySession ^session, sp_playlistcontainer *pl_container);
+            SpotifyPlaylistCollection(sp_playlistcontainer *pl_container);
             ~SpotifyPlaylistCollection();
 
-            void container_loaded();
-            void playlist_added(sp_playlist *pl, int position);
-            void playlist_removed(sp_playlist *pl, int position);
-            void playlist_state_changed(sp_playlist *pl);
+            void sp_playlistcontainer_container_loaded();
+
+            void sp_playlistcontainer_playlist_added(sp_playlist *pl, int position);
+            void sp_playlistcontainer_playlist_removed(sp_playlist *pl, int position);
+            void sp_playlistcontainer_playlist_moved(sp_playlist *pl);
+            
             void playlist_metadata_updated(sp_playlist *pl);
 
             void Spotify_tracks_added(sp_playlist *pl, sp_track * const *tracks, int num_tracks, int position);
@@ -34,20 +36,19 @@ namespace Restify
             sp_playlistcontainer *get_pl_container() { return _pl_container; }
 
         public:
-            property bool IsLoaded
-            {
-                bool get()
-                {
-                    return sp_playlistcontainer_is_loaded(_pl_container);
-                }
-            }
+            event Action ^Loaded;
+            event Action<SpotifyPlaylist ^> ^Added;
+            event Action<SpotifyPlaylist ^> ^Removed;
+
+        private:
+            bool _isLoaded;
+
+        public:
+            property bool IsLoaded { bool get() { return _isLoaded; } }
 
             property int Count
             {
-                int get()
-                {
-                    return _list->Count;
-                }
+                int get() { return _list->Count; }
             }
 
             List<SpotifyPlaylist ^> ^ToList()

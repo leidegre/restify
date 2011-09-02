@@ -152,7 +152,11 @@ namespace Restify
             return true;
         }
 
-        void SpotifySession::Login(String ^userName, String ^password)
+        //
+        // Auth
+        //
+
+        void SpotifySession::Login(String ^userName, String ^password, bool rememberMe)
         {
             EnsureSession();
             EnsureAccess();
@@ -161,6 +165,64 @@ namespace Restify
             pin_ptr<Byte> pUserName = &Stringify(userName)[0];
             pin_ptr<Byte> pPassword = &Stringify(password)[0];
             sp_session_login(_session, (const char *)pUserName, (const char *)pPassword);
+        }
+
+        String ^SpotifySession::GetMe()
+        {
+            EnsureSession();
+            EnsureAccess();
+            return nullptr;
+        }
+
+        void SpotifySession::LoginMe()
+        {
+            EnsureSession();
+            EnsureAccess();
+        }
+
+        void SpotifySession::ForgetMe()
+        {
+            EnsureSession();
+            EnsureAccess();
+        }
+
+        //
+        // Playback
+        //
+
+        bool SpotifySession::LoadTrack(SpotifyTrack ^track)
+        {
+            EnsureSession();
+            EnsureAccess();
+            return sp_session_player_load(_session, track->get_track()) == SP_ERROR_OK;
+        }
+
+        void SpotifySession::PlayTrack(bool play)
+        {
+            EnsureSession();
+            EnsureAccess();
+            sp_session_player_play(_session, play);
+        }
+
+        void SpotifySession::SeekTrack(int offset)
+        {
+            EnsureSession();
+            EnsureAccess();
+            sp_session_player_seek(_session, offset);
+        }
+
+        void SpotifySession::UnloadTrack()
+        {
+            EnsureSession();
+            EnsureAccess();
+            sp_session_player_unload(_session);
+        }
+
+        bool SpotifySession::PrefetchTrack(SpotifyTrack ^track)
+        {
+            EnsureSession();
+            EnsureAccess();
+            return sp_session_player_prefetch(_session, track->get_track()) == SP_ERROR_OK;
         }
 
         //

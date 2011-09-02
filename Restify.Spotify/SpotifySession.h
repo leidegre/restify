@@ -34,7 +34,16 @@ namespace Restify
 
             bool Initialize(array<Byte> ^appKey);
 
-            void Login(String ^userName, String ^password);
+            void Login(String ^userName, String ^password, bool rememberMe);
+            String ^GetMe();
+            void LoginMe();
+            void ForgetMe();
+            
+            bool LoadTrack(SpotifyTrack ^track);
+            void PlayTrack(bool play);
+            void SeekTrack(int offset);
+            void UnloadTrack();
+            bool PrefetchTrack(SpotifyTrack ^track);
 
         internal:
             void session_logged_in(sp_error error);

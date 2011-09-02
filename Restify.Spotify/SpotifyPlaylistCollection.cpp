@@ -12,27 +12,24 @@ namespace Restify
 
         // container callbacks
         
-        void SP_CALLCONV Spotify_container_loaded(sp_playlistcontainer *pl_container, void *userdata)
+        void SP_CALLCONV sp_playlistcontainer_container_loaded(sp_playlistcontainer *pl_container, void *userdata)
         {
-            trace("Spotify_container_loaded\r\n");
-            GetSpotifyPlaylistCollection(userdata)->container_loaded();
+            GetSpotifyPlaylistCollection(userdata)->playlistcontainer_container_loaded();
         }
         
-        void SP_CALLCONV Spotify_playlist_added(sp_playlistcontainer *pc, sp_playlist *pl, int position, void *userdata)
+        void SP_CALLCONV sp_playlistcontainer_playlist_added(sp_playlistcontainer *pc, sp_playlist *pl, int position, void *userdata)
         {
-            trace("Spotify_playlist_added\r\n");
-            GetSpotifyPlaylistCollection(userdata)->playlist_added(pl, position);
+            GetSpotifyPlaylistCollection(userdata)->playlistcontainer_playlist_added(pl, position);
         }
         
-        void SP_CALLCONV Spotify_playlist_removed(sp_playlistcontainer *pc, sp_playlist *pl, int position, void *userdata)
+        void SP_CALLCONV sp_playlistcontainer_playlist_removed(sp_playlistcontainer *pc, sp_playlist *pl, int position, void *userdata)
         {
-            trace("Spotify_playlist_removed\r\n");
             GetSpotifyPlaylistCollection(userdata)->playlist_removed(pl, position);
         }
 
-        void SP_CALLCONV Spotify_playlist_moved(sp_playlistcontainer *pc, sp_playlist *pl, int position, int new_position, void *userdata)
+        void SP_CALLCONV sp_playlistcontainer_playlist_moved(sp_playlistcontainer *pc, sp_playlist *pl, int position, int new_position, void *userdata)
         {
-            trace("Spotify_playlist_moved\r\n");
+            GetSpotifyPlaylistCollection(userdata)->playlist_moved(pl, position, new_position);
         }
 
         // <sp_playlist_callbacks>
@@ -73,15 +70,13 @@ namespace Restify
         
         // </sp_playlist_callbacks>
 
-        SpotifyPlaylistCollection::SpotifyPlaylistCollection(SpotifySession ^session, sp_playlistcontainer *pl_container)
-            : _session(session)
-            , _pl_container(pl_container)
-            , _pl_container_callbacks(new sp_playlistcontainer_callbacks)
-            , _pl_callbacks(new sp_playlist_callbacks)
+        SpotifyPlaylistCollection::SpotifyPlaylistCollection(sp_playlistcontainer *pl_container)
+            : _pl_container(pl_container)
             , _list(gcnew ConcurrentDictionary<IntPtr, SpotifyPlaylist ^>(gcnew IntPtrEqualityComparer()))
         {
             _gcroot = new gcroot<SpotifyPlaylistCollection ^>(this);
             
+            _pl_container_callbacks = new sp_playlistcontainer_callbacks;
             RtlZeroMemory(_pl_container_callbacks, sizeof(sp_playlistcontainer_callbacks));
             _pl_container_callbacks->playlist_added = &Spotify_playlist_added;
             _pl_container_callbacks->playlist_removed = &Spotify_playlist_removed;
@@ -89,6 +84,7 @@ namespace Restify
             _pl_container_callbacks->container_loaded = &Spotify_container_loaded;
             sp_playlistcontainer_add_callbacks(_pl_container, _pl_container_callbacks, _gcroot);
 
+            _pl_callbacks = new sp_playlist_callbacks;
             RtlZeroMemory(_pl_callbacks, sizeof(sp_playlist_callbacks));
             _pl_callbacks->tracks_added = &sp_playlist_tracks_added;
             _pl_callbacks->tracks_removed = &sp_playlist_tracks_removed;
@@ -112,32 +108,26 @@ namespace Restify
             delete _gcroot;
         }
 
-        void SpotifyPlaylistCollection::container_loaded()
+        void SpotifyPlaylistCollection::sp_playlistcontainer_container_loaded()
         {
-            //auto handle = _session->_getPlaylistCollection;
-            //if (handle != nullptr)
-            //    handle->Set();
         }
 
-        void SpotifyPlaylistCollection::playlist_added(sp_playlist *pl, int position)
+        void SpotifyPlaylistCollection::sp_playlistcontainer_playlist_added(sp_playlist *pl, int position)
         {
             sp_playlist_add_callbacks(pl, _pl_callbacks, _gcroot);
             _list->TryAdd(IntPtr(pl), gcnew SpotifyPlaylist(pl));
         }
 
-        void SpotifyPlaylistCollection::playlist_removed(sp_playlist *pl, int position)
+        void SpotifyPlaylistCollection::sp_playlistcontainer_playlist_removed(sp_playlist *pl, int position)
         {
+            sp_playlist_remove_callbacks(pl, _pl_callbacks, _gcroot);
             SpotifyPlaylist ^plObject;
             _list->TryRemove(IntPtr(pl), plObject);
+            
         }
 
-        void SpotifyPlaylistCollection::playlist_state_changed(sp_playlist *pl)
+        void SpotifyPlaylistCollection::sp_playlistcontainer_playlist_moved(sp_playlist *pl)
         {
-            //SpotifyPlaylist ^plObject;
-            //if (_list->TryGetValue(IntPtr(pl), plObject))
-            //{
-            //    _session->Do(gcnew SpotifyPlaylistStateChangeAction(plObject));
-            //}
         }
 
         void SpotifyPlaylistCollection::playlist_metadata_updated(sp_playlist *pl)
