@@ -22,18 +22,19 @@ namespace Restify
             SpotifyPlaylistCollection(sp_playlistcontainer *pl_container);
             ~SpotifyPlaylistCollection();
 
-            void sp_playlistcontainer_container_loaded();
-
-            void sp_playlistcontainer_playlist_added(sp_playlist *pl, int position);
-            void sp_playlistcontainer_playlist_removed(sp_playlist *pl, int position);
-            void sp_playlistcontainer_playlist_moved(sp_playlist *pl);
-            
-            void playlist_metadata_updated(sp_playlist *pl);
-
-            void Spotify_tracks_added(sp_playlist *pl, sp_track * const *tracks, int num_tracks, int position);
-            void Spotify_tracks_removed(sp_playlist *pl, const int *tracks, int num_tracks);
-
             sp_playlistcontainer *get_pl_container() { return _pl_container; }
+            
+            // playlist container callbacks
+            void container_loaded();
+            void playlist_added(sp_playlist *pl, int position);
+            void playlist_removed(sp_playlist *pl, int position);
+            
+            // playlist callbacks
+            void tracks_added(sp_playlist *pl, sp_track * const *tracks, int num_tracks, int position);
+            void tracks_removed(sp_playlist *pl, const int *tracks, int num_tracks);
+            void playlist_renamed(sp_playlist *pl);
+            void playlist_state_changed(sp_playlist *pl);
+            void playlist_metadata_updated(sp_playlist *pl);
 
         public:
             event Action ^Loaded;

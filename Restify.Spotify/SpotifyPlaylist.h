@@ -6,7 +6,7 @@ namespace Restify
     {
         public delegate void SpotifyPlaylistTracksEventHandler(SpotifyPlaylist^ pl, IList<SpotifyTrack ^> ^tracks);
 
-        public ref class SpotifyPlaylist : SpotifyObservable
+        public ref class SpotifyPlaylist
         {
         private:
             sp_playlist *_pl;

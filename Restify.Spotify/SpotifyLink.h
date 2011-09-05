@@ -18,25 +18,46 @@ namespace Restify
             Image = SP_LINKTYPE_IMAGE 
         };
 
-        public value struct SpotifyLink
+        [System::Diagnostics::DebuggerDisplay("{_s, nq}, Type = {_type}")]
+        public value struct SpotifyLink : IEquatable<SpotifyLink>
         {
         private:
-            sp_link *_link;
             SpotifyLinkType _type;
             String ^_s;
             
         internal:
-            sp_link *get_link() { return _link; }
-
-            SpotifyLink(sp_link *link);
+            void Initialize(String ^s);
 
         public:
             property SpotifyLinkType Type { SpotifyLinkType get() { return _type; } }
-
+            
             property bool HasValue { bool get() { return _s != nullptr; } }
             property String ^Value { String ^get() { return _s; } }
 
-            SpotifyLink(String ^s);
+            virtual bool Equals(Object ^obj) override
+            {
+                auto value = safe_cast<Nullable<SpotifyLink>>(obj);
+                if (value.HasValue)
+                {
+                    return Equals(value.Value);
+                }
+                return false;
+            }
+
+            virtual bool Equals(SpotifyLink link)
+            {
+                return _s == link._s;
+            }
+
+            virtual int GetHashCode() override
+            {
+                return _s != nullptr ? _s->GetHashCode() : 0;
+            }
+
+            virtual String ^ToString() override
+            {
+                return _s;
+            }
         };
     }
 }

@@ -51,7 +51,6 @@ namespace Restify
             var appkey_file = FindFile(spotify_appkey);
             if (!string.IsNullOrEmpty(appkey_file))
                 appkey = File.ReadAllBytes(appkey_file);
-            
 #endif
 
             if (appkey == null)
@@ -70,7 +69,7 @@ namespace Restify
             var currentRoot = Path.GetPathRoot(currentPath);
             var currentFile = Path.Combine(currentPath, fileName);
 
-            while (currentFile.Length > currentPath.Length && !File.Exists(currentFile))
+            while (currentFile.Length > currentRoot.Length && !File.Exists(currentFile))
                 currentFile = Path.Combine((currentPath = Path.GetDirectoryName(currentPath)), fileName);
 
             if (File.Exists(currentFile))
@@ -81,7 +80,7 @@ namespace Restify
 
         public bool IsLoggedIn { get; private set; }
 
-        public bool Login(string user, string pass)
+        public bool Login(string userName, string password)
         {
             lock (_session)
             {
@@ -100,10 +99,10 @@ namespace Restify
                     _session.LoggedIn += loggedIn;
                     
                     _session.Post(() => {
-                        _session.Login(user, pass);
+                        _session.Login(userName, password, false);
                     });
 
-                    wait.Wait();
+                    wait.Wait(_defaultTimeout);
                     
                     _session.LoggedIn -= loggedIn;
                 }
@@ -116,7 +115,7 @@ namespace Restify
 
         public List<SpotifyPlaylist> GetPlaylists()
         {
-            return null;
+            return new List<SpotifyPlaylist>();
         }
 
         public SpotifyPlaylist GetPlaylist(string id)

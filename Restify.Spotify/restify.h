@@ -89,25 +89,17 @@ namespace Restify
         };
 
         ref class SpotifyTrack;
+        ref class SpotifyAlbum;
+        ref class SpotifyArtist;
         ref class SpotifyPlaylist;
         ref class SpotifyPlaylistCollection;
         ref class SpotifySession;
-
-        public delegate void SpotifySessionEventHandler(SpotifySession^ sender);
-        public delegate void SpotifySessionErrorEventHandler(SpotifySession^ sender, SpotifyError error);
     }
 }
 
-//#include "Spotify.h"
-
 #include "SpotifyLink.h"
-
-//#include "SpotifyAsync.h"
-
-#include "SpotifyObservable.h"
-
 #include "SpotifyException.h"
-
+#include "SpotifySearch.h"
 #include "SpotifyTrack.h"
 #include "SpotifyPlaylist.h"
 #include "SpotifyPlaylistCollection.h"

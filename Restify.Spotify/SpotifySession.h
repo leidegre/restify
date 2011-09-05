@@ -9,16 +9,62 @@ namespace Restify
             void Invoke();
         };
 
-        public ref class SpotifySession
+        // internal (used to zip the session together with value as a GCHandle, 
+        // used with callbacks in libspotify)
+        generic <typename T>
+        ref class SpotifyTag<T>
         {
         private:
+            SpotifySession ^_session; 
+            T _value;
+
+        public:
+            property SpotifySession ^Session { SpotifySession ^get() { return _session; } }
+            property T Value { T get() { return _value; } }
+
+            SpotifySession(SpotifySession^ session, T value)
+                : _session(session)
+                , _value(value)
+            {
+            }
+
+            static gcroot<SpotifySession<T> ^> *Alloc(T value)
+            {
+                return new gcroot<SpotifySession<T> ^>(gcnew SpotifySession(this, value));
+            }
+
+            static gcroot<SpotifySession<T> ^> ^Get(void *p)
+            {
+                return *static_cast<gcroot<SpotifySession<T> ^> *>(p);
+            }
+
+            static SpotifySession<T> ^Free(void *p)
+            {
+                gcroot<SpotifySession<T> ^> s = Get(p);
+                delete static_cast<gcroot<SpotifySession<T> ^> *>(p);
+                return s;
+            }
+        }
+
+        public ref class SpotifySession
+        {
+        internal:
+            generic <typename T>
+            gcroot<SpotifySession<T> ^> *Alloc(T value)
+            {
+                return new gcroot<SpotifySession<T> ^>(gcnew SpotifySession(this, value));
+            }
+
+        private:
+            gcroot<SpotifySession ^> *_gcroot;
+            
             sp_session_callbacks *_callbacks;
             sp_session_config *_config;
+            
             sp_session *_session;
             
             Object ^_syncRoot;
             ConcurrentQueue<ISpotifyMessage ^> ^_queue;
-            gcroot<SpotifySession ^> *_gcroot;
 
             waveform_api *_waveform;
 
@@ -68,25 +114,31 @@ namespace Restify
             bool _stopMessageLoop;
 
             static int _messageLoopThreadId;
-
-        public:
-            static bool HasAccess()
+            
+            bool HasAccess()
             {
                 return _messageLoopThreadId == GetCurrentThreadId();
             }
 
-            static void EnsureAccess()
+            void EnsureAccess()
             {
                 if (!HasAccess())
                     throw gcnew InvalidOperationException(L"The Spotify API has to be called through a single thread. If you need to access the Spotify API from a different thread, use Post or PostSynchronized.");
             }
 
+        public:
+            
             void Post(Action ^action);
             void PostSynchronized(Action ^action);
 
             void RunMessageLoop();
             void StopMessageLoop();
 
+            SpotifyLink CreateLink(String ^link);
+            
+            SpotifyTrack ^CreateTrack(SpotifyLink link);
+
+            void Search(SpotifySearch ^search);
         };
 
 

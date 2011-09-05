@@ -71,6 +71,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="restify.cpp" />
+    <ClCompile Include="SpotifySearch.cpp" />
     <ClCompile Include="SpotifySession.cpp" />
     <ClCompile Include="SpotifyLink.cpp" />
     <ClCompile Include="SpotifyPlaylist.cpp" />
@@ -79,6 +80,7 @@
     <ClCompile Include="waveform.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="SpotifySearch.h" />
     <ClInclude Include="SpotifySession.h" />
     <ClInclude Include="restify.h" />
     <ClInclude Include="SpotifyException.h" />

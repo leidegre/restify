@@ -103,7 +103,8 @@ namespace Restify
 
         bool SpotifySession::Initialize(array<Byte> ^appKey)
         {
-            Contract::Requires(appKey != nullptr);
+            if (appKey == nullptr)
+                throw gcnew ArgumentNullException("s");
 
             if (_session)
                 throw gcnew InvalidOperationException(L"The Spotify API has already been initialized once.");
@@ -158,10 +159,12 @@ namespace Restify
 
         void SpotifySession::Login(String ^userName, String ^password, bool rememberMe)
         {
+            if (userName == nullptr)
+                throw gcnew ArgumentNullException("userName");
+            if (password == nullptr)
+                throw gcnew ArgumentNullException("password");
             EnsureSession();
             EnsureAccess();
-            Contract::Requires(userName != nullptr);
-            Contract::Requires(password != nullptr);
             pin_ptr<Byte> pUserName = &Stringify(userName)[0];
             pin_ptr<Byte> pPassword = &Stringify(password)[0];
             sp_session_login(_session, (const char *)pUserName, (const char *)pPassword);
@@ -247,7 +250,8 @@ namespace Restify
 
         void SpotifySession::Post(Action ^action)
         {
-            Contract::Requires(action != nullptr);
+            if (action == nullptr)
+                throw gcnew ArgumentNullException("action");
             if (!HasAccess()) // prevent posting from message loop to cause dead-lock
             {
                 SpotifyMessage ^msg = gcnew SpotifyMessage(action);
@@ -291,7 +295,8 @@ namespace Restify
 
         void SpotifySession::PostSynchronized(Action ^action)
         {
-            Contract::Requires(action != nullptr);
+            if (action == nullptr)
+                throw gcnew ArgumentNullException("action");
             if (!HasAccess()) // prevent posting from message loop to cause dead-lock
             {
                 // C++/CLI repurposes the delete keyword for managed classes, deconstructors implements IDisposable 
@@ -314,6 +319,50 @@ namespace Restify
             {
                 action();
             }
+        }
+
+        SpotifyLink SpotifySession::CreateLink(String ^s)
+        {
+            if (s == nullptr)
+                throw gcnew ArgumentNullException("s");
+            
+            EnsureAccess();
+
+            SpotifyLink l;
+            l.Initialize(s);
+            return l;
+        }
+
+        SpotifyTrack ^SpotifySession::CreateTrack(SpotifyLink link)
+        {
+            return nullptr;
+        }
+
+        void SP_CALLCONV sp_search_complete(sp_search *result, void *userdata)
+        {
+            gcroot<SpotifySearch ^> *s = static_cast<gcroot<SpotifySearch ^> *>(userdata);
+            try
+            {
+
+                //(*s)->search_complete(result);
+            }
+            finally
+            {
+                if (s)
+                    delete s;
+                sp_search_release(result);
+            }
+        }
+
+        void SpotifySession::Search(SpotifySearch ^search)
+        {
+            if (search == nullptr)
+                throw gcnew ArgumentNullException("search");
+            EnsureSession();
+            EnsureAccess();
+            pin_ptr<Byte> query = &Stringify(search->Query)[0]; 
+            gcroot<SpotifySearch ^> *userdata = new gcroot<SpotifySession<SpotifySearch ^>^>(search);
+            sp_search_create(_session, (const char *)query, search->TrackOffset, search->TrackCount, search->AlbumOffset, search->AlbumCount, search->ArtistOffset, search->ArtistCount, &sp_search_complete, userdata);
         }
 
         //
