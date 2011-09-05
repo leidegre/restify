@@ -52,11 +52,11 @@ namespace Restify.Services
             throw new NotImplementedException();
         }
 
-        public void Play(RestifyTrackRequest track)
+        public void Play(bool play)
         {
             using (new OperationContextScope(InnerChannel))
             {
-                Channel.Play(track);
+                Channel.Play(play);
             }
         }
 
@@ -65,6 +65,22 @@ namespace Restify.Services
             using (new OperationContextScope(InnerChannel))
             {
                 Channel.Enqueue(trackId);
+            }
+        }
+
+        public RestifyTrack Dequeue()
+        {
+            using (new OperationContextScope(InnerChannel))
+            {
+                return Channel.Dequeue();
+            }
+        }
+
+        public RestifySearchResult Search(string text)
+        {
+            using (new OperationContextScope(InnerChannel))
+            {
+                return Channel.Search(text);
             }
         }
     }

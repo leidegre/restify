@@ -13,24 +13,79 @@
 #include <vcclr.h> // gcroot
 #include <msclr/lock.h> // lock
 
+// <gcroot>
+
+// internal helper functions to allow managed objects 
+// to be passing around with callbacks
+
+template<typename T>
+inline
+gcroot<T> *gcalloc(T value)
+{
+    return new gcroot<T>(value);
+}
+
+template<typename T>
+inline
+gcroot<T> gcget(void *p)
+{
+    return *static_cast<gcroot<T> *>(p);
+}
+
+template<typename T>
+inline
+void gcfree(void *p)
+{
+    delete static_cast<gcroot<T> *>(p);
+}
+
+generic<typename A, typename B>
+ref class Pair
+{
+public:
+    initonly A a;
+    initonly B b;
+    Pair(A a, B b)
+        : a(a)
+        , b(b)
+    {
+    }
+};
+
+template<typename A, typename B>
+inline
+Pair<A, B> ^gcpair(A a, B b)
+{
+    return gcnew Pair<A, B>(a, b);
+}
+
+// </gcroot>
 
 #define CONCAT(x, y) x ## y
 
 #define LOCK(object) \
     msclr::lock CONCAT(lock__, __LINE__)(object)
 
-// import specific types
-typedef System::Diagnostics::Contracts::Contract Contract;
-
 using namespace System;
 using namespace System::Text;
 using namespace System::Collections::Generic;
 using namespace System::Collections::Concurrent;
-using namespace System::ComponentModel;
 
 using namespace System::Threading;
 
-using namespace System::Runtime::InteropServices;
+//
+// libspotify thread safety helper functions 
+// (NOTE: you can't run more than one instance at a time)
+//
+void sp_set_thread_access();
+bool sp_has_thread_access();
+
+inline
+void sp_get_thread_access()
+{
+    if (!sp_has_thread_access())
+        throw gcnew InvalidOperationException(L"The Spotify API has to be called through a single thread. If you need to access the Spotify API from a different thread, use Post or PostSynchronized to do so.");
+}
 
 //
 //  Converts a managed Unicode character string to a c-style null-terminated UTF-8 `array<Byte> ^`
@@ -94,6 +149,12 @@ namespace Restify
         ref class SpotifyPlaylist;
         ref class SpotifyPlaylistCollection;
         ref class SpotifySession;
+
+        interface class ISpotifyMessage
+        {
+        public:
+            void Invoke();
+        };
     }
 }
 

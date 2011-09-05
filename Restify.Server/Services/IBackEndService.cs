@@ -28,11 +28,19 @@ namespace Restify.Services
         List<RestifyTrack> GetPlaylist(RestifyPlaylistRequest playlist);
 
         [OperationContract]
-        [WebInvoke(UriTemplate = "/play")]
-        void Play(RestifyTrackRequest track);
+        [WebInvoke(UriTemplate = "/search?q={text}")]
+        RestifySearchResult Search(string text);
+
+        [OperationContract]
+        [WebInvoke(UriTemplate = "/playback?play={play}")]
+        void Play(bool play);
 
         [OperationContract]
         [WebInvoke(Method = "PUT", UriTemplate = "/queue/{trackId}")]
         void Enqueue(string trackId);
+
+        [OperationContract]
+        [WebInvoke(Method = "DELETE", UriTemplate = "/queue")]
+        RestifyTrack Dequeue();
     }
 }

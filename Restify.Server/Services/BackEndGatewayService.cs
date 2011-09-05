@@ -31,7 +31,7 @@ namespace Restify.Services
             throw new NotImplementedException();
         }
 
-        public void Play(RestifyTrackRequest track)
+        public void Play(bool play)
         {
             lock (LoginService.userMapping)
             {
@@ -46,14 +46,31 @@ namespace Restify.Services
                 {
                     using (var client = instance.CreateClient())
                     {
-                        client.Play(track);
+                        client.Play(play);
                     }
                 }
             }
         }
 
+        public RestifySearchResult Search(string text)
+        {
+            throw new NotImplementedException();
+        }
+
+        static Queue<string> pq = new Queue<string>();
+        static HashSet<string> pqset = new HashSet<string>(StringComparer.Ordinal);
+
         public void Enqueue(string trackId)
         {
+            lock (pq)
+            {
+                // only accept currently not queued tracks
+                if (pqset.Add(trackId))
+                    pq.Enqueue(trackId);
+                else
+                    return;
+            }
+
             lock (LoginService.userMapping)
             {
                 var instance = LoginService.userMapping.FirstOrDefault(x => x.Value.IsMaster).Value;
@@ -67,10 +84,24 @@ namespace Restify.Services
                 {
                     using (var client = instance.CreateClient())
                     {
-                        client.Enqueue(trackId);
+                        client.Play(true);
                     }
                 }
             }
+        }
+
+        public RestifyTrack Dequeue()
+        {
+            lock (pq)
+            {
+                if (pq.Count > 0)
+                {
+                    var trackId = pq.Dequeue();
+                    pqset.Remove(trackId);
+                    return new RestifyTrack { Id = trackId };
+                }
+            }
+            return null;
         }
     }
 }

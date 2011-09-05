@@ -75,6 +75,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Services\RestifySearchResult.cs" />
     <Compile Include="Services\BackEndGatewayService.cs" />
     <Compile Include="Services\BackEndServiceClient.cs" />
     <Compile Include="Services\RestifyLoginRequest.cs" />

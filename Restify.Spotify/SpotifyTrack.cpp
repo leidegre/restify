@@ -25,6 +25,19 @@ namespace Restify
                     sp_link_release(link);
                 }
                 _title = Unstringify(sp_track_name(_track));
+                StringBuilder ^sb = gcnew StringBuilder();
+                for (int i = 0; i < sp_track_num_artists(_track); i++)
+                {
+                    sp_artist *artist = sp_track_artist(_track, i);
+                    if (sp_artist_is_loaded(artist))
+                    {
+                        if (sb->Length > 0)
+                            sb->Append(L", ");
+                        
+                        sb->Append(Unstringify(sp_artist_name(artist)));
+                    }
+                }
+                _artist = sb->ToString();
                 _length = TimeSpan(TimeSpan::TicksPerMillisecond * sp_track_duration(_track));
                 _isLoaded = true;
             }

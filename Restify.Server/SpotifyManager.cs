@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading;
 using Restify.Client;
 using System.IO;
+using Restify.Services;
 
 namespace Restify
 {
@@ -27,8 +28,6 @@ namespace Restify
         private SpotifyManager()
         {
             const string spotify_appkey = "spotify_appkey.key";
-
-            _session = new SpotifySession();
 
             byte[] appkey = null;
 
@@ -58,7 +57,8 @@ namespace Restify
                 throw new FileNotFoundException(string.Format("Cannot find Spotify application key file '{0}'.", spotify_appkey), spotify_appkey);
             }
 
-            _session.Initialize(appkey);
+            _session = new SpotifySession(appkey);
+            _session.EndOfTrack += new Action(OnEndOfTrack);
 
             ThreadPool.QueueUserWorkItem(_ => _session.RunMessageLoop());
         }
@@ -74,7 +74,7 @@ namespace Restify
 
             if (File.Exists(currentFile))
                 return currentFile;
-            
+
             return null;
         }
 
@@ -95,15 +95,16 @@ namespace Restify
                         error = err;
                         wait.Set();
                     };
-                    
+
                     _session.LoggedIn += loggedIn;
-                    
+
                     _session.Post(() => {
                         _session.Login(userName, password, false);
                     });
 
-                    wait.Wait(_defaultTimeout);
-                    
+                    if (!wait.Wait(_defaultTimeout))
+                        throw new TimeoutException();
+
                     _session.LoggedIn -= loggedIn;
                 }
 
@@ -123,12 +124,91 @@ namespace Restify
             return null;
         }
 
-        public void Play(string id)
+        public RestifySearchResult Search(string query)
         {
+            SpotifySearchResult result = null;
+
+            if (string.IsNullOrEmpty(query))
+                return null;
+
+            using (var wait = new ManualResetEventSlim())
+            {
+                // No need to unsubscribe here like we do with login because
+                // the event is attached to this object which is cleaned up automatically
+                // (the same thing is not possible with login, due to libspotify API design)
+
+                var q = new SpotifySearchQuery { Query = query, TrackCount = 30 };
+
+                q.Completed += r => {
+                    result = r;
+                    wait.Set();
+                };
+
+                _session.Post(() => {
+                    _session.Search(q);
+                });
+
+                if (!wait.Wait(_defaultTimeout))
+                    throw new TimeoutException();
+            }
+
+            var actualResult = new RestifySearchResult();
+
+            if (result.Success)
+            {
+                var tracks = new List<RestifyTrack>();
+
+                if (result.Tracks != null)
+                {
+                    foreach (var track in result.Tracks)
+                    {
+                        tracks.Add(new RestifyTrack { Id = track.Id, Title = track.Title, Artist = track.Artist, Length = RestifyTrack.ToString(track.Length) });
+                    }
+                }
+
+                actualResult.Tracks = tracks;
+            }
+
+            return actualResult;
         }
 
-        public void Enqueue(string id)
+        #region Playback
+
+        RestifyTrack currentTrack;
+
+        public void Play(bool play)
         {
+            _session.Post(() => _session.PlayTrack(play));
+            if (play && currentTrack == null)
+            {
+                OnEndOfTrack(); // grab a track
+            }
         }
+
+        void OnEndOfTrack()
+        {
+            if (Program.InstanceName != null)
+            {
+                using (var client = new BackEndServiceClient(Program.BaseEndpoint + "/gateway"))
+                {
+                    var track = client.Dequeue();
+                    
+                    currentTrack = track;
+                    
+                    if (track != null)
+                    {
+                        _session.Post(() => {
+                            var trackLink = new SpotifyLink(track.Id);
+                            if (_session.LoadTrack(trackLink.CreateTrack()))
+                                _session.PlayTrack(true);
+                            else
+                                currentTrack = null;
+                        });
+                    }
+                }
+            }
+        }
+
+        #endregion
     }
 }

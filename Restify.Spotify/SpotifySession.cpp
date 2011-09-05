@@ -5,22 +5,6 @@ namespace Restify
 {
     namespace Client
     {
-        SpotifySession::SpotifySession()
-            : _syncRoot(gcnew Object())
-            , _queue(gcnew ConcurrentQueue<ISpotifyMessage ^>())
-        {
-            _gcroot = new gcroot<SpotifySession ^>(this);
-        }
-
-        SpotifySession::~SpotifySession()
-        {
-            if (_gcroot)
-            {
-                delete _gcroot;
-                _gcroot = nullptr;
-            }
-        }
-        
         //
         // Session callbacks
         //
@@ -101,20 +85,15 @@ namespace Restify
             PlayTokenLost();
         }
 
-        bool SpotifySession::Initialize(array<Byte> ^appKey)
+        SpotifySession::SpotifySession(array<Byte> ^appKey)
+            : _syncRoot(gcnew Object())
+            , _queue(gcnew ConcurrentQueue<ISpotifyMessage ^>())
         {
             if (appKey == nullptr)
                 throw gcnew ArgumentNullException("s");
 
-            if (_session)
-                throw gcnew InvalidOperationException(L"The Spotify API has already been initialized once.");
+            auto root = gcalloc(this);
             
-            waveform_api *waveform;
-            if (waveform_init(&waveform))
-            {
-                _waveform = waveform;
-            }
-
             sp_session_callbacks *callbacks = new sp_session_callbacks;
             RtlZeroMemory(callbacks, sizeof(sp_session_callbacks));
             callbacks->logged_in = &sp_session_logged_in;
@@ -134,7 +113,7 @@ namespace Restify
             config->application_key = pAppKey;
             config->application_key_size = appKey->Length;
             config->user_agent = "RESTify";
-            config->userdata = _gcroot;
+            config->userdata = root;
             config->callbacks = callbacks;
             
             sp_session *session;
@@ -144,13 +123,24 @@ namespace Restify
             {
                 delete callbacks;
                 delete config;
-                return false;
+                delete root;
+                throw gcnew SpotifyException(err);
             }
-
-            _callbacks = callbacks;
-            _config = config;
+            
+            // Yeah, the constructor can leak memory however, in it's current state, 
+            // libspotify doesn't support multiple sessions per process
+            
+            waveform_api *waveform;
+            if (waveform_init(&waveform))
+            {
+                _waveform = waveform;
+            }
+            
             _session = session;
-            return true;
+        }
+
+        SpotifySession::~SpotifySession()
+        {
         }
 
         //
@@ -163,8 +153,7 @@ namespace Restify
                 throw gcnew ArgumentNullException("userName");
             if (password == nullptr)
                 throw gcnew ArgumentNullException("password");
-            EnsureSession();
-            EnsureAccess();
+            sp_get_thread_access();
             pin_ptr<Byte> pUserName = &Stringify(userName)[0];
             pin_ptr<Byte> pPassword = &Stringify(password)[0];
             sp_session_login(_session, (const char *)pUserName, (const char *)pPassword);
@@ -172,21 +161,18 @@ namespace Restify
 
         String ^SpotifySession::GetMe()
         {
-            EnsureSession();
-            EnsureAccess();
+            sp_get_thread_access();
             return nullptr;
         }
 
         void SpotifySession::LoginMe()
         {
-            EnsureSession();
-            EnsureAccess();
+            sp_get_thread_access();
         }
 
         void SpotifySession::ForgetMe()
         {
-            EnsureSession();
-            EnsureAccess();
+            sp_get_thread_access();
         }
 
         //
@@ -195,83 +181,46 @@ namespace Restify
 
         bool SpotifySession::LoadTrack(SpotifyTrack ^track)
         {
-            EnsureSession();
-            EnsureAccess();
+            sp_get_thread_access();
             return sp_session_player_load(_session, track->get_track()) == SP_ERROR_OK;
         }
 
         void SpotifySession::PlayTrack(bool play)
         {
-            EnsureSession();
-            EnsureAccess();
+            sp_get_thread_access();
             sp_session_player_play(_session, play);
         }
 
         void SpotifySession::SeekTrack(int offset)
         {
-            EnsureSession();
-            EnsureAccess();
+            sp_get_thread_access();
             sp_session_player_seek(_session, offset);
         }
 
         void SpotifySession::UnloadTrack()
         {
-            EnsureSession();
-            EnsureAccess();
+            sp_get_thread_access();
             sp_session_player_unload(_session);
         }
 
         bool SpotifySession::PrefetchTrack(SpotifyTrack ^track)
         {
-            EnsureSession();
-            EnsureAccess();
+            sp_get_thread_access();
             return sp_session_player_prefetch(_session, track->get_track()) == SP_ERROR_OK;
         }
 
         //
         // Message passing
         //
-
-        ref class SpotifyMessage : ISpotifyMessage
-        {
-            Action ^_action;
-
-        public:
-            SpotifyMessage(Action ^action)
-                : _action(action)
-            {
-            }
-
-            virtual void Invoke()
-            {
-                _action();
-            }
-        };
-
-        void SpotifySession::Post(Action ^action)
-        {
-            if (action == nullptr)
-                throw gcnew ArgumentNullException("action");
-            if (!HasAccess()) // prevent posting from message loop to cause dead-lock
-            {
-                SpotifyMessage ^msg = gcnew SpotifyMessage(action);
-                _queue->Enqueue(msg);
-                NotifyMessageLoop();
-            }
-            else
-            {
-                action();
-            }
-        }
         
         ref class SpotifySynchronizedMessage : ISpotifyMessage
         {
-            Action ^_action;
+            ISpotifyMessage ^_msg;
             ManualResetEventSlim ^_event;
 
         public:
-            SpotifySynchronizedMessage(Action ^action)
-                : _action(action)
+            SpotifySynchronizedMessage(ISpotifyMessage ^msg)
+                : _msg(msg)
             {
                 _event = gcnew ManualResetEventSlim(false);
             }
@@ -288,23 +237,55 @@ namespace Restify
 
             virtual void Invoke()
             {
-                _action();
+                _msg->Invoke();
                 _event->Set();
             }
         };
-
-        void SpotifySession::PostSynchronized(Action ^action)
+        
+        ref class SpotifyMessage : ISpotifyMessage
         {
-            if (action == nullptr)
-                throw gcnew ArgumentNullException("action");
-            if (!HasAccess()) // prevent posting from message loop to cause dead-lock
+            Action ^_action;
+
+        public:
+            SpotifyMessage(Action ^action)
+                : _action(action)
+            {
+            }
+
+            virtual void Invoke()
+            {
+                _action();
+            }
+        };
+        
+        void SpotifySession::Post(ISpotifyMessage ^msg)
+        {
+            if (msg == nullptr)
+                throw gcnew ArgumentNullException("msg");
+            if (!sp_has_thread_access()) // prevent posting from message loop to cause dead-lock
+            {
+                _queue->Enqueue(msg);
+                NotifyMessageLoop();
+            }
+            else
+            {
+                msg->Invoke();
+            }
+        }
+        
+        void SpotifySession::PostSynchronized(ISpotifyMessage ^msg)
+        {
+            if (msg == nullptr)
+                throw gcnew ArgumentNullException("msg");
+
+            if (!sp_has_thread_access()) // prevent posting from message loop to cause dead-lock
             {
                 // C++/CLI repurposes the delete keyword for managed classes, deconstructors implements IDisposable 
                 // and let's you use the try/finally pattern to do deterministic cleanup (scoped)
                 SpotifySynchronizedMessage ^syncMsg = nullptr; 
                 try
                 {
-                    syncMsg = gcnew SpotifySynchronizedMessage(action);
+                    syncMsg = gcnew SpotifySynchronizedMessage(msg);
                     _queue->Enqueue(syncMsg);
                     NotifyMessageLoop();
                     syncMsg->Wait();
@@ -317,51 +298,40 @@ namespace Restify
             }
             else
             {
-                action();
+                msg->Invoke();
             }
         }
 
-        SpotifyLink SpotifySession::CreateLink(String ^s)
+        void SpotifySession::Post(Action ^action)
         {
-            if (s == nullptr)
-                throw gcnew ArgumentNullException("s");
-            
-            EnsureAccess();
+            if (action == nullptr)
+                throw gcnew ArgumentNullException("action");
 
-            SpotifyLink l;
-            l.Initialize(s);
-            return l;
+            Post(gcnew SpotifyMessage(action));
         }
-
-        SpotifyTrack ^SpotifySession::CreateTrack(SpotifyLink link)
+        
+        void SpotifySession::PostSynchronized(Action ^action)
         {
-            return nullptr;
-        }
+            if (action == nullptr)
+                throw gcnew ArgumentNullException("action");
 
+            PostSynchronized(gcnew SpotifyMessage(action));
+        }
+        
         void SP_CALLCONV sp_search_complete(sp_search *result, void *userdata)
         {
-            gcroot<SpotifySearch ^> *s = static_cast<gcroot<SpotifySearch ^> *>(userdata);
-            try
-            {
-
-                //(*s)->search_complete(result);
-            }
-            finally
-            {
-                if (s)
-                    delete s;
-                sp_search_release(result);
-            }
+            auto s = gcget<Pair<SpotifySession ^, SpotifySearchQuery ^> ^>(userdata);
+            s->a->Post(gcnew SpotifySearchResultMessage(s->b, result));
+            gcfree<Pair<SpotifySession ^, SpotifySearchQuery ^> ^>(userdata);
         }
 
-        void SpotifySession::Search(SpotifySearch ^search)
+        void SpotifySession::Search(SpotifySearchQuery ^search)
         {
             if (search == nullptr)
                 throw gcnew ArgumentNullException("search");
-            EnsureSession();
-            EnsureAccess();
+            sp_get_thread_access();
             pin_ptr<Byte> query = &Stringify(search->Query)[0]; 
-            gcroot<SpotifySearch ^> *userdata = new gcroot<SpotifySession<SpotifySearch ^>^>(search);
+            auto userdata = gcalloc(gcpair(this, search));
             sp_search_create(_session, (const char *)query, search->TrackOffset, search->TrackCount, search->AlbumOffset, search->AlbumCount, search->ArtistOffset, search->ArtistCount, &sp_search_complete, userdata);
         }
 
@@ -382,7 +352,7 @@ namespace Restify
             if (!_session)
                 throw gcnew InvalidOperationException(L"You have to initialize the Spotifi API before you can run the message loop.");
 
-            SpotifySession::_messageLoopThreadId = GetCurrentThreadId();
+            sp_set_thread_access();
             
             Monitor::Enter(_syncRoot);
 
@@ -398,7 +368,7 @@ namespace Restify
                 Monitor::Exit(_syncRoot);
                 
                 //
-                // Process managed events
+                // Process external events
                 //
                 ISpotifyMessage ^msg;
                 while (SpotifySession::_queue->TryDequeue(msg))

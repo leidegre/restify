@@ -19,8 +19,8 @@ namespace Restify
             property List<SpotifyArtist ^> ^Artists;
             property int ArtistTotal;
         };
-
-        public ref class SpotifySearch
+        
+        public ref class SpotifySearchQuery
         {
         internal:
             void search_complete(sp_search *result)
@@ -38,6 +38,31 @@ namespace Restify
             property int AlbumCount;
             property int ArtistOffset;
             property int ArtistCount;
+        };
+
+        ref class SpotifySearchResultMessage : ISpotifyMessage
+        {
+        private:
+            SpotifySearchQuery ^_search; 
+            sp_search *_result;
+
+        public:
+            SpotifySearchResultMessage(SpotifySearchQuery ^search, sp_search *result)
+                : _search(search)
+                , _result(result)
+            {
+            }
+            
+            ~SpotifySearchResultMessage()
+            {
+                if (_result)
+                {
+                    sp_search_release(_result);
+                    _result = nullptr;
+                }
+            }
+
+            virtual void Invoke();
         };
     }
 }

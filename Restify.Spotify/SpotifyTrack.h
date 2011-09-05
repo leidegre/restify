@@ -35,13 +35,21 @@ namespace Restify
             {
                 String ^get() { return _id; }
             }
-
+            
         private:
             String ^_title;
         public:
             property String ^Title
             {
                 String ^get() { return _title; }
+            }
+
+        private:
+            String ^_artist;
+        public:
+            property String ^Artist
+            {
+                String ^get() { return _artist; }
             }
 
         private:

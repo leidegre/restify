@@ -1,14 +1,30 @@
 
 #include "restify.h"
 
-//[assembly: System::Runtime::CompilerServices::InternalsVisibleToAttribute(L"Restify.Server")];
+//
+// Thread safety helper functions
+//
+
+static DWORD sp_main_thread_id;
+
+void sp_set_thread_access()
+{
+    sp_main_thread_id = GetCurrentThreadId();
+}
+
+bool sp_has_thread_access()
+{
+    return GetCurrentThreadId() == sp_main_thread_id;
+}
+
+//
+// Managed to unmanaged (Spotfy strings) and vice versa
+//
 
 array<Byte> ^Stringify(String^ s)
 {
     if (s == nullptr || s->Length == 0)
-    {
         return gcnew array<Byte>(1);
-    }
     int length = Encoding::UTF8->GetByteCount(s);
     array<Byte> ^cstr = gcnew array<Byte>(length + 1);
     Encoding::UTF8->GetBytes(s, 0, s->Length, cstr, 0);

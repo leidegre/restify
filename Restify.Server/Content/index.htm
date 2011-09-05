@@ -16,10 +16,10 @@
 
     <div id="form-login" data-bind="visible: !loginInfo.isLoggedIn()">
         <h1>RESTify<br /><small class="subtitle">A Spotify REST API that happens to run in your browser ;)</small></h1>
-        <form data-bind="submit: loginInfo.submit.bind(loginInfo)">
+        <form action="#login" data-bind="submit: loginInfo.submit.bind(loginInfo)">
             <ul class="form">
                 <li><label>user:</label></li>
-                <li><input type="text" data-bind="value: loginInfo.user" /></li>
+                <li><input id="user-textbox" type="text" data-bind="value: loginInfo.user" /></li>
                 <li><label>pass:</label></li>
                 <li><input type="password" data-bind="value: loginInfo.pass" /></li>
             </ul>
@@ -30,38 +30,27 @@
         </form>
     </div>
 
-    <div id="playlists">
+    <div id="search" data-bind="visible: loginInfo.isLoggedIn()">
     
-        <button type="button" data-bind="click: init">Refresh</button>
+        <form action="#search" data-bind="submit: search">
+            
+            <input id="search-textbox" type="text" data-bind="value: searchText, valueUpdate: 'afterkeydown'" />
 
-        <ul data-bind="template: { name: 'playlistsTemplate', foreach: playlists }" />
-
-        <script id="playlistsTemplate" type="text/html">
-            <li>
-                <a href="#" data-bind="click: show"><span>${title()}</span></a>
-            </li>
-        </script>
-
+        </form>
+        
     </div>
 
     <div id="tracks">
     
-        <table data-bind="visible: playlist()">
-            <thead>
-                <tr>
-                    <th>Title</th>
-                    <th>Length</th>
-                    <td></td>
-                </tr>
-            </thead>
+        <table class="tracks" data-bind="visible: has_tracks()">
             <tbody data-bind="template: { name: 'tracksTemplate', foreach: tracks }" />
         </table>
 
         <script id="tracksTemplate" type="text/html">
             <tr>
-                <td><a href="#" data-bind="click: play">${title}</a></td>
-                <td>${length}</td>
-                <td><button type="button" data-bind="click: enqueue">Enqueue</button></td>
+                <td><a href="#" data-bind="click: enqueue">${title}</a></td>
+                <td>${artist}</td>
+                <td class="track-length">${length}</td>
             </tr>      
         </script>
 
@@ -105,6 +94,7 @@
         function trackItem(item) {
             this.id = item.Id;
             this.title = item.Title;
+            this.artist = item.Artist;
             this.length = item.Length;
             this.play = function () {
                 $.postJSON("/restify/gateway/play", {
@@ -144,8 +134,9 @@
 
             this.playlists = ko.observableArray([]);
             this.playlist = ko.observable(null);
-            
+
             this.tracks = ko.observableArray([]);
+            this.has_tracks = ko.dependentObservable(function () { return this.tracks().length > 0; }, this);
 
             this.init = function () {
                 $.postJSON("/restify/user/" + this.instanceName + "/playlists", undefined, function (data) {
@@ -153,6 +144,18 @@
                         return new playlistItem(item)
                     });
                     self.playlists(playlists);
+                });
+            }
+
+            this.searchText = ko.observable("");
+            this.search = function () {
+                $.postJSON("/restify/user/" + this.instanceName + "/search?q=" + encodeURIComponent(this.searchText()), undefined, function (data) {
+                    if (data && data.Tracks) {
+                        var tracks = $.map(data.Tracks, function (item) {
+                            return new trackItem(item)
+                        });
+                        window.viewModel.tracks(tracks);
+                    }
                 });
             }
 
@@ -166,6 +169,22 @@
 
         window.viewModel = new restifyViewModel();
         ko.applyBindings(window.viewModel);
+
+        $(function () {
+            $(document)
+                .keydown(function (e) {
+                    // Don't fire in text-accepting inputs that we didn't directly bind to
+                    if (this !== e.target && (/textarea|select/i.test(e.target.nodeName) || e.target.type === "text")) {
+                        return;
+                    }
+                    var character = String.fromCharCode(e.which).toLowerCase();
+                    if (character == "f") {
+                        $("#search-textbox").focus().select();
+                        e.preventDefault();
+                    }
+                });
+            $("#user-textbox").focus();
+        });
 
     </script>
 

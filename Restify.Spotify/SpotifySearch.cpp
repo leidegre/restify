@@ -7,6 +7,8 @@ namespace Restify
     {
         SpotifySearchResult::SpotifySearchResult(sp_search *result)
         {
+            sp_get_thread_access();
+
             if (sp_search_error(result) != SP_ERROR_OK)
                 return;
 
@@ -16,10 +18,17 @@ namespace Restify
             for (int i = 0; i < sp_search_num_tracks(result); i++)
             {
                 auto track = sp_search_track(result, i);
-
+                tracks->Add(gcnew SpotifyTrack(track));
             }
 
+            Tracks = tracks;
+
             Success = true;
+        }
+
+        void SpotifySearchResultMessage::Invoke()
+        {
+            _search->search_complete(_result);
         }
     }
 }

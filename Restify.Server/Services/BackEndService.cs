@@ -44,7 +44,6 @@ namespace Restify.Services
             return playlists;
         }
 
-
         public List<RestifyTrack> GetPlaylist(RestifyPlaylistRequest playlist)
         {
             var list = new List<RestifyTrack>();
@@ -56,21 +55,30 @@ namespace Restify.Services
                 list.Add(new RestifyTrack {
                     Id = track.Id,
                     Title = track.Title,
-                    Length = track.Length,
+                    Length = RestifyTrack.ToString(track.Length),
                 });
             }
 
             return list;
         }
 
-        public void Play(RestifyTrackRequest track)
+        public void Play(bool play)
         {
-            SpotifyManager.Current.Play(track.Id);
+            SpotifyManager.Current.Play(play);
         }
 
         public void Enqueue(string trackId)
         {
-            SpotifyManager.Current.Enqueue(trackId);
+        }
+
+        public RestifyTrack Dequeue()
+        {
+            return null;
+        }
+
+        public RestifySearchResult Search(string text)
+        {
+            return SpotifyManager.Current.Search(text);
         }
     }
 }

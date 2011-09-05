@@ -24,15 +24,16 @@ namespace Restify
         private:
             SpotifyLinkType _type;
             String ^_s;
-            
-        internal:
-            void Initialize(String ^s);
-
+                        
         public:
+            SpotifyLink(String ^s);
+
             property SpotifyLinkType Type { SpotifyLinkType get() { return _type; } }
             
             property bool HasValue { bool get() { return _s != nullptr; } }
             property String ^Value { String ^get() { return _s; } }
+
+            SpotifyTrack ^CreateTrack();
 
             virtual bool Equals(Object ^obj) override
             {

@@ -26,6 +26,13 @@ namespace Restify
         [DllImport("kernel32.dll")]
         extern static bool SetDllDirectory(string lpPathName);
 
+        public static string BaseEndpoint { get; private set; }
+
+        static Program()
+        {
+            BaseEndpoint = "http://localhost/restify";
+        }
+
         static int Main(string[] args)
         {
             // This call cannot be made in a method that uses
@@ -148,7 +155,7 @@ namespace Restify
             Trace.WriteLine("Configuring service host...");
 
             var frontEndHost = new ServiceHost(typeof(FrontEndService));
-            var frontEndBaseUri = "http://localhost/restify";
+            var frontEndBaseUri = BaseEndpoint;
             var frontEndEndPoint = frontEndHost.AddServiceEndpoint(typeof(IFrontEndService), new WebHttpBinding(), frontEndBaseUri);
             frontEndEndPoint.Behaviors.Add(new WebHttpBehavior {
                 AutomaticFormatSelectionEnabled = false,
@@ -163,7 +170,7 @@ namespace Restify
             Trace.WriteLine(frontEndBaseUri);
 
             var loginHost = new ServiceHost(typeof(LoginService));
-            var loginBaseUri = "http://localhost/restify/auth";
+            var loginBaseUri = BaseEndpoint + "/auth";
             var loginEndPoint = loginHost.AddServiceEndpoint(typeof(ILoginService), new WebHttpBinding(), loginBaseUri);
             loginEndPoint.Behaviors.Add(new WebHttpBehavior {
                 AutomaticFormatSelectionEnabled = false,
@@ -178,7 +185,7 @@ namespace Restify
             Trace.WriteLine(loginBaseUri);
 
             var gatewayHost = new ServiceHost(typeof(BackEndGatewayService));
-            var gatewayBaseUri = "http://localhost/restify/gateway";
+            var gatewayBaseUri = BaseEndpoint + "/gateway";
             var gatewayEndPoint = gatewayHost.AddServiceEndpoint(typeof(IBackEndService), new WebHttpBinding(), gatewayBaseUri);
             gatewayEndPoint.Behaviors.Add(new WebHttpBehavior {
                 AutomaticFormatSelectionEnabled = false,
@@ -213,7 +220,7 @@ namespace Restify
                 MessageQueue.PostQuit(0);
             });
 
-            System.Diagnostics.Process.Start("http://localhost/restify");
+            System.Diagnostics.Process.Start(BaseEndpoint);
 
             return MessageQueue.RunMessageLoop();
         }
@@ -229,7 +236,7 @@ namespace Restify
                 {
                     InstanceName = instanceName;
 
-                    var baseUri = "http://localhost/restify/user/" + instanceName;
+                    var baseUri = BaseEndpoint + "/user/" + instanceName;
 
                     var endPoint = serviceHost.AddServiceEndpoint(typeof(IBackEndService), new WebHttpBinding { }, baseUri);
                     
