@@ -11,6 +11,21 @@ namespace Restify.Services
     {
         const string InstanceHeaderName = "X-RESTify-Instance";
 
+        bool GetSpotifyInstance(out SpotifyInstance instance)
+        {
+            lock (LoginService.userMapping)
+            {
+                instance = LoginService.userMapping.FirstOrDefault(x => x.Value.IsMaster).Value;
+                if (instance == null)
+                {
+                    instance = LoginService.userMapping.FirstOrDefault().Value;
+                    if (instance != null)
+                        instance.IsMaster = true;
+                }
+                return instance != null;
+            }
+        }
+
         public RestifyLoginResponse IsLoggedIn(RestifyLoginRequest login)
         {
             throw new NotImplementedException();
@@ -31,23 +46,38 @@ namespace Restify.Services
             throw new NotImplementedException();
         }
 
-        public void Play(bool play)
+        public void Play()
         {
-            lock (LoginService.userMapping)
+            SpotifyInstance instance;
+            if (GetSpotifyInstance(out instance))
             {
-                var instance = LoginService.userMapping.FirstOrDefault(x => x.Value.IsMaster).Value;
-                if (instance == null)
+                using (var client = instance.CreateClient())
                 {
-                    instance = LoginService.userMapping.FirstOrDefault().Value;
-                    if (instance != null)
-                        instance.IsMaster = true;
+                    client.Play();
                 }
-                if (instance != null)
+            }
+        }
+
+        public void PlayPause()
+        {
+            SpotifyInstance instance;
+            if (GetSpotifyInstance(out instance))
+            {
+                using (var client = instance.CreateClient())
                 {
-                    using (var client = instance.CreateClient())
-                    {
-                        client.Play(play);
-                    }
+                    client.PlayPause();
+                }
+            }
+        }
+
+        public void Next()
+        {
+            SpotifyInstance instance;
+            if (GetSpotifyInstance(out instance))
+            {
+                using (var client = instance.CreateClient())
+                {
+                    client.Next();
                 }
             }
         }
@@ -70,24 +100,7 @@ namespace Restify.Services
                 else
                     return;
             }
-
-            lock (LoginService.userMapping)
-            {
-                var instance = LoginService.userMapping.FirstOrDefault(x => x.Value.IsMaster).Value;
-                if (instance == null)
-                {
-                    instance = LoginService.userMapping.FirstOrDefault().Value;
-                    if (instance != null)
-                        instance.IsMaster = true;
-                }
-                if (instance != null)
-                {
-                    using (var client = instance.CreateClient())
-                    {
-                        client.Play(true);
-                    }
-                }
-            }
+            Play();
         }
 
         public RestifyTrack Dequeue()
@@ -103,5 +116,7 @@ namespace Restify.Services
             }
             return null;
         }
+
+        
     }
 }

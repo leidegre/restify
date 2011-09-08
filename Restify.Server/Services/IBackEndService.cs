@@ -32,8 +32,16 @@ namespace Restify.Services
         RestifySearchResult Search(string text);
 
         [OperationContract]
-        [WebInvoke(UriTemplate = "/playback?play={play}")]
-        void Play(bool play);
+        [WebInvoke(UriTemplate = "/playback/play")]
+        void Play();
+
+        [OperationContract]
+        [WebInvoke(UriTemplate = "/playback/playPause")]
+        void PlayPause();
+
+        [OperationContract]
+        [WebInvoke(UriTemplate = "/playback/next")]
+        void Next();
 
         [OperationContract]
         [WebInvoke(Method = "PUT", UriTemplate = "/queue/{trackId}")]

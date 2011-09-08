@@ -62,9 +62,19 @@ namespace Restify.Services
             return list;
         }
 
-        public void Play(bool play)
+        public void Play()
         {
-            SpotifyManager.Current.Play(play);
+            SpotifyManager.Current.Play();
+        }
+
+        public void PlayPause()
+        {
+            SpotifyManager.Current.PlayPause();
+        }
+
+        public void Next()
+        {
+            SpotifyManager.Current.Next();
         }
 
         public void Enqueue(string trackId)

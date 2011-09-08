@@ -175,14 +175,27 @@ namespace Restify
         #region Playback
 
         RestifyTrack currentTrack;
+        private bool _isPlaying;
 
-        public void Play(bool play)
+        public void Play()
         {
-            _session.Post(() => _session.PlayTrack(play));
-            if (play && currentTrack == null)
+            _session.Post(() => _session.PlayTrack(true));
+            if (currentTrack == null)
             {
                 OnEndOfTrack(); // grab a track
             }
+        }
+
+        public void PlayPause()
+        {
+            var play = !_isPlaying;
+            _session.Post(() => _session.PlayTrack(play));
+            _isPlaying = play;
+        }
+
+        public void Next()
+        {
+            OnEndOfTrack();
         }
 
         void OnEndOfTrack()
@@ -199,10 +212,17 @@ namespace Restify
                     {
                         _session.Post(() => {
                             var trackLink = new SpotifyLink(track.Id);
+                            _session.UnloadTrack();
                             if (_session.LoadTrack(trackLink.CreateTrack()))
+                            {
                                 _session.PlayTrack(true);
+                                _isPlaying = true;
+                            }
                             else
+                            {
                                 currentTrack = null;
+                                _isPlaying = false;
+                            }
                         });
                     }
                 }

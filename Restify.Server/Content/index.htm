@@ -37,6 +37,18 @@
             <input id="search-textbox" type="text" data-bind="value: searchText, valueUpdate: 'afterkeydown'" />
 
         </form>
+
+        <form action="#play-pause" data-bind="submit: playPause">
+            
+            <button type="submit">Play/Pause</button>
+
+        </form>
+
+        <form action="#next" data-bind="submit: next">
+            
+            <button type="submit">Next</button>
+
+        </form>
         
     </div>
 
@@ -53,7 +65,6 @@
                 <td class="track-length">${length}</td>
             </tr>      
         </script>
-
 
     </div>
 
@@ -157,6 +168,14 @@
                         window.viewModel.tracks(tracks);
                     }
                 });
+            }
+
+            this.playPause = function () {
+                $.postJSON("/restify/gateway/playback/playPause");
+            }
+
+            this.next = function () {
+                $.postJSON("/restify/gateway/playback/next");
             }
 
 //            var self = this;

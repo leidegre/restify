@@ -24,9 +24,28 @@ bool waveform_init(waveform_api **waveform)
     if (!waveform)
         return false;
 
-    *waveform = new waveform_api;
-    RtlZeroMemory(*waveform, sizeof(waveform_api));
+    waveform_api *w = new waveform_api;
+    RtlZeroMemory(w, sizeof(waveform_api));
+    
+    w->audio_buffer = malloc(waveform_api::audio_buffer_chunk_count * waveform_api::audio_buffer_chunk_size);
+    w->audio_buffer_head = 0;
+    w->audio_buffer_tail = 0;
+
+    *waveform = w;
     return true;
+}
+
+void waveform_destroy(waveform_api *waveform)
+{
+    waveOutClose(waveform->audio_dev);
+    waveform->audio_dev = nullptr;
+}
+
+void waveform_reset(waveform_api *waveform)
+{
+    waveform->audio_buffer_head = 0;
+    waveform->audio_buffer_tail = 0;
+    waveOutReset(waveform->audio_dev);
 }
 
 int waveform_music_delivery(waveform_api *waveform, const sp_audioformat *format, const void *frames, int num_frames)
@@ -39,11 +58,10 @@ int waveform_music_delivery(waveform_api *waveform, const sp_audioformat *format
     if (num_frames == 0)
         return 0; // audio discontinuity, do nothing
 
-    static LARGE_INTEGER freq;
-    static BOOL _freq = QueryPerformanceFrequency(&freq);
-
-    LARGE_INTEGER t0, t;
-    QueryPerformanceCounter(&t0);
+    //static LARGE_INTEGER freq;
+    //static BOOL _freq = QueryPerformanceFrequency(&freq);
+    //LARGE_INTEGER t0, t;
+    //QueryPerformanceCounter(&t0);
     
     if (!waveform->audio_dev)
     {
@@ -61,10 +79,7 @@ int waveform_music_delivery(waveform_api *waveform, const sp_audioformat *format
         HWAVEOUT waveOut;
         if (waveOutOpen(&waveOut, WAVE_MAPPER, &fmt, NULL, NULL, CALLBACK_NULL) == MMSYSERR_NOERROR)
         {
-            waveform->audio_dev         = waveOut;
-            waveform->audio_buffer      = malloc(waveform_api::audio_buffer_chunk_count * waveform_api::audio_buffer_chunk_size); // TODO: this is leaky, if the device is recreated
-            waveform->audio_buffer_head = 0;
-            waveform->audio_buffer_tail = 0;
+            waveform->audio_dev = waveOut;
         }
     }
 
@@ -109,11 +124,20 @@ int waveform_music_delivery(waveform_api *waveform, const sp_audioformat *format
             result = waveOutWrite(waveform->audio_dev, wave, sizeof(WAVEHDR));
     }
             
-    QueryPerformanceCounter(&t);
-
-    trace("waveform_music_delivery frameBufferCount: %5u dT=%6llu us\r\n", frameBufferCount, ((1000 * 1000) * (t.QuadPart - t0.QuadPart)) / freq.QuadPart);
+    //QueryPerformanceCounter(&t);
+    //trace("waveform_music_delivery frameBufferCount: %5u dT=%6llu us\r\n", frameBufferCount, ((1000 * 1000) * (t.QuadPart - t0.QuadPart)) / freq.QuadPart);
             
     // returning 0 is bad libspotify will just callback at a later time 
     // but since the device is broken we cannot really do anything...
     return result == MMSYSERR_NOERROR ? num_frames : 0;
+}
+
+void waveform_pause(waveform_api *waveform)
+{
+    waveOutPause(waveform->audio_dev);
+}
+
+void waveform_play(waveform_api *waveform)
+{
+    waveOutRestart(waveform->audio_dev);
 }

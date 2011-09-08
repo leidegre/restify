@@ -52,11 +52,27 @@ namespace Restify.Services
             throw new NotImplementedException();
         }
 
-        public void Play(bool play)
+        public void Play()
         {
             using (new OperationContextScope(InnerChannel))
             {
-                Channel.Play(play);
+                Channel.Play();
+            }
+        }
+
+        public void PlayPause()
+        {
+            using (new OperationContextScope(InnerChannel))
+            {
+                Channel.PlayPause();
+            }
+        }
+
+        public void Next()
+        {
+            using (new OperationContextScope(InnerChannel))
+            {
+                Channel.Next();
             }
         }
 

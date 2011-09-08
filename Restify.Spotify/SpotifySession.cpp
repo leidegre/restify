@@ -182,13 +182,19 @@ namespace Restify
         bool SpotifySession::LoadTrack(SpotifyTrack ^track)
         {
             sp_get_thread_access();
-            return sp_session_player_load(_session, track->get_track()) == SP_ERROR_OK;
+            sp_error error = sp_session_player_load(_session, track->get_track());
+            trace("sp_session_player_load: %i (%u)\r\n", error == SP_ERROR_OK, error)
+            return error == SP_ERROR_OK;
         }
 
         void SpotifySession::PlayTrack(bool play)
         {
             sp_get_thread_access();
             sp_session_player_play(_session, play);
+            if (play)
+                waveform_play(_waveform);
+            else
+                waveform_pause(_waveform);
         }
 
         void SpotifySession::SeekTrack(int offset)
@@ -200,6 +206,7 @@ namespace Restify
         void SpotifySession::UnloadTrack()
         {
             sp_get_thread_access();
+            waveform_reset(_waveform);
             sp_session_player_unload(_session);
         }
 
