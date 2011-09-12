@@ -122,7 +122,6 @@ namespace Restify
             BadApiVersion = SP_ERROR_BAD_API_VERSION,
             ApiInitializationFailed = SP_ERROR_API_INITIALIZATION_FAILED,
             TrackNotPlayable = SP_ERROR_TRACK_NOT_PLAYABLE,
-            ResourceNotLoaded = SP_ERROR_RESOURCE_NOT_LOADED,
             BadApplicationKey = SP_ERROR_BAD_APPLICATION_KEY,
             BadUsernameOrPassword = SP_ERROR_BAD_USERNAME_OR_PASSWORD,
             UserBanned = SP_ERROR_USER_BANNED,

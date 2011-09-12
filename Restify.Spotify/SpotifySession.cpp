@@ -132,9 +132,7 @@ namespace Restify
             
             waveform_api *waveform;
             if (waveform_init(&waveform))
-            {
                 _waveform = waveform;
-            }
             
             _session = session;
         }
@@ -156,7 +154,7 @@ namespace Restify
             sp_get_thread_access();
             pin_ptr<Byte> pUserName = &Stringify(userName)[0];
             pin_ptr<Byte> pPassword = &Stringify(password)[0];
-            sp_session_login(_session, (const char *)pUserName, (const char *)pPassword);
+            sp_session_login(_session, (const char *)pUserName, (const char *)pPassword, false);
         }
 
         String ^SpotifySession::GetMe()
@@ -182,8 +180,32 @@ namespace Restify
         bool SpotifySession::LoadTrack(SpotifyTrack ^track)
         {
             sp_get_thread_access();
-            sp_error error = sp_session_player_load(_session, track->get_track());
+            
+            sp_error error;
+
+            // hmm...
+
+            int retry_count = 0;
+            while (!sp_track_is_available(_session, track->get_track()))
+            {
+                if (retry_count == 0 && (error = sp_session_player_prefetch(_session, track->get_track())) != SP_ERROR_OK)
+                {
+                    trace("!sp_track_is_available: cannot prefetch track (%u)\r\n", error);
+                    break;
+                }
+
+                if (retry_count++ > 5)
+                    break;
+                
+                trace("!sp_track_is_available: %i\r\n", retry_count)
+
+                Sleep(1000);
+            }
+            
+            error = sp_session_player_load(_session, track->get_track());
+
             trace("sp_session_player_load: %i (%u)\r\n", error == SP_ERROR_OK, error)
+
             return error == SP_ERROR_OK;
         }
 

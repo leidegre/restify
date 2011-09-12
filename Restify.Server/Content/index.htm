@@ -158,16 +158,24 @@
                 });
             }
 
+            var searchTrackId = new RegExp("^(?:spotify:track:|http://open.spotify.com/track/)(\\w+)$");
+
             this.searchText = ko.observable("");
             this.search = function () {
-                $.postJSON("/restify/user/" + this.instanceName + "/search?q=" + encodeURIComponent(this.searchText()), undefined, function (data) {
-                    if (data && data.Tracks) {
-                        var tracks = $.map(data.Tracks, function (item) {
-                            return new trackItem(item)
-                        });
-                        window.viewModel.tracks(tracks);
-                    }
-                });
+                var m = searchTrackId.exec(this.searchText())
+                if (m) {
+                    $.JSON("PUT", "/restify/gateway/queue/" + encodeURIComponent("spotify:track:" + m[1]));
+                    this.searchText(null);
+                } else {
+                    $.postJSON("/restify/user/" + this.instanceName + "/search?q=" + encodeURIComponent(this.searchText()), undefined, function (data) {
+                        if (data && data.Tracks) {
+                            var tracks = $.map(data.Tracks, function (item) {
+                                return new trackItem(item)
+                            });
+                            window.viewModel.tracks(tracks);
+                        }
+                    });
+                }
             }
 
             this.playPause = function () {
