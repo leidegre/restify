@@ -8,16 +8,58 @@ namespace Restify
         //
         // Session callbacks
         //
-        
+
+        delegate void sp_action();
+        delegate void sp_action_sp_session_(sp_session *session);
+        delegate void sp_action_sp_error_(sp_error error);
+
+        typedef void (__stdcall *sp_interop)();
+        typedef void (__stdcall *sp_interop_session)(sp_session *session);
+        typedef void (__stdcall *sp_interop_error)(sp_error error);
+
+        struct sp_userdata {
+            gcroot<SpotifySession ^> *session;
+            sp_interop notify_main_thread;
+            sp_interop_error logged_in;
+        };
+
+        /* network threads
+        session.notify_main_thread
+        session.end_of_track
+        session.music_delivery
+        session.start_playback
+        session.stop_playback
+        session.get_audio_buffer_stats
+        */
+
+        void SP_CALLCONV sp_session_notify_main_thread(sp_session *session)
+        {
+            sp_userdata *userdata = static_cast<sp_userdata *>(sp_session_userdata(session));
+            userdata->notify_main_thread();
+        }
+
+        void SpotifySession::session_notify_main_thread()
+        {
+            NotifyMessageLoop();
+        }
+
+        void SpotifySession::session_metadata_updated(sp_session *session)
+        {
+            MetadataUpdated();
+        }
+
         gcroot<SpotifySession ^> GetSpotifySession(sp_session* session)
         {
             // NOTE: this is a thread-safe operation (or it has to be, otherwise very little would be possible)
-            return *static_cast<gcroot<SpotifySession ^> *>(sp_session_userdata(session));
+            sp_userdata *userdata = static_cast<sp_userdata *>(sp_session_userdata(session));
+            return *userdata->session;
         }
 
         void SP_CALLCONV sp_session_logged_in(sp_session *session, sp_error error)
         {
-            GetSpotifySession(session)->session_logged_in(error);
+            sp_userdata *userdata = static_cast<sp_userdata *>(sp_session_userdata(session));
+            userdata->logged_in(error);
+            //GetSpotifySession(session)->session_logged_in(error);
         }
 
         void SpotifySession::session_logged_in(sp_error error)
@@ -43,16 +85,6 @@ namespace Restify
         void SpotifySession::session_connection_error(sp_error error)
         {
             ConnectionError((SpotifyError)error);
-        }
-
-        void SP_CALLCONV sp_session_notify_main_thread(sp_session *session)
-        {
-            GetSpotifySession(session)->session_notify_main_thread();
-        }
-
-        void SpotifySession::session_notify_main_thread()
-        {
-            NotifyMessageLoop();
         }
 
         int SP_CALLCONV sp_session_music_delivery(sp_session *session, const sp_audioformat *format, const void *frames, int num_frames)
@@ -85,12 +117,18 @@ namespace Restify
             PlayTokenLost();
         }
 
-        SpotifySession::SpotifySession(array<Byte> ^appKey)
+        SpotifySession::SpotifySession(SpotifySessionConfiguration ^configuration)
             : _syncRoot(gcnew Object())
+            , _callback(gcnew sp_action(this, &SpotifySession::session_notify_main_thread))
+            , _loggedIn(gcnew sp_action_sp_error_(this, &SpotifySession::session_logged_in))
+            , _metadataUpdated(gcnew sp_action_sp_session_(this, &SpotifySession::session_metadata_updated))
             , _queue(gcnew ConcurrentQueue<ISpotifyMessage ^>())
         {
-            if (appKey == nullptr)
-                throw gcnew ArgumentNullException("s");
+            if (configuration == nullptr)
+                throw gcnew ArgumentNullException("configuration");
+
+            if (configuration->ApplicationKey == nullptr)
+                throw gcnew ArgumentException("Application key cannot be null.", "configuration");
 
             auto root = gcalloc(this);
             
@@ -103,17 +141,25 @@ namespace Restify
             callbacks->music_delivery = &sp_session_music_delivery;
             callbacks->end_of_track = &sp_session_end_of_track;
             callbacks->play_token_lost = &sp_session_play_token_lost;
+            callbacks->metadata_updated = dtof<sp_interop_session>(_metadataUpdated);
 
             sp_session_config *config = new sp_session_config;
             RtlZeroMemory(config, sizeof(sp_session_config));
             config->api_version = SPOTIFY_API_VERSION;
-            config->cache_location = "tmp";
-            config->settings_location = "tmp";
-            pin_ptr<Byte> pAppKey = &appKey[0];
+            pin_ptr<Byte> cache_location = &stringify(configuration->CacheLocation)[0];
+            config->cache_location = (const char *)cache_location;
+            pin_ptr<Byte> settings_location = &stringify(configuration->SettingsLocation)[0];
+            config->settings_location = (const char *)settings_location;
+            pin_ptr<Byte> pAppKey = &configuration->ApplicationKey[0];
             config->application_key = pAppKey;
-            config->application_key_size = appKey->Length;
+            config->application_key_size = configuration->ApplicationKey->Length;
             config->user_agent = "RESTify";
-            config->userdata = root;
+
+            sp_userdata *userdata = new sp_userdata;
+            userdata->session = root;
+            userdata->notify_main_thread = (sp_interop)System::Runtime::InteropServices::Marshal::GetFunctionPointerForDelegate(_callback).ToPointer();
+            userdata->logged_in = (sp_interop_error)System::Runtime::InteropServices::Marshal::GetFunctionPointerForDelegate(_loggedIn).ToPointer();
+            config->userdata = userdata;
             config->callbacks = callbacks;
             
             sp_session *session;
@@ -152,8 +198,8 @@ namespace Restify
             if (password == nullptr)
                 throw gcnew ArgumentNullException("password");
             sp_get_thread_access();
-            pin_ptr<Byte> pUserName = &Stringify(userName)[0];
-            pin_ptr<Byte> pPassword = &Stringify(password)[0];
+            pin_ptr<Byte> pUserName = &stringify(userName)[0];
+            pin_ptr<Byte> pPassword = &stringify(password)[0];
             sp_session_login(_session, (const char *)pUserName, (const char *)pPassword, false);
         }
 
@@ -359,7 +405,7 @@ namespace Restify
             if (search == nullptr)
                 throw gcnew ArgumentNullException("search");
             sp_get_thread_access();
-            pin_ptr<Byte> query = &Stringify(search->Query)[0]; 
+            pin_ptr<Byte> query = &stringify(search->Query)[0]; 
             auto userdata = gcalloc(gcpair(this, search));
             sp_search_create(_session, (const char *)query, search->TrackOffset, search->TrackCount, search->AlbumOffset, search->AlbumCount, search->ArtistOffset, search->ArtistCount, &sp_search_complete, userdata);
         }
@@ -425,6 +471,38 @@ namespace Restify
         {
             _stopMessageLoop = true;
             NotifyMessageLoop();
+        }
+
+        ISpotifyMetaobject ^SpotifySession::CreateMetaobject(String ^spotifyUri)
+        {
+            if (spotifyUri == nullptr)
+                throw gcnew ArgumentNullException(L"spotifyUri");
+
+            if (!spotifyUri->StartsWith("spotify:"))
+                throw gcnew ArgumentException(L"Spotify URIs starts with the 'spotify:' URI schema.", L"spotifyUri");
+
+            pin_ptr<Byte> p = &stringify(spotifyUri)[0];
+
+            sp_link *link = sp_link_create_from_string((const char *)p);
+            if (!link)
+                return nullptr;
+
+            ISpotifyMetaobject ^obj = nullptr;
+
+            switch (sp_link_type(link))
+            {
+            case SP_LINKTYPE_TRACK:
+                {
+                    sp_track *track = sp_link_as_track(link);
+                    sp_track_add_ref(track);
+                    obj = gcnew SpotifyTrack(track);
+                }
+                break;
+            }
+
+            sp_link_release(link);
+
+            return obj;
         }
     }
 }

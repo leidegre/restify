@@ -21,21 +21,6 @@
     <ClInclude Include="SpotifyException.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="SpotifyTrack.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="SpotifyPlaylist.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="SpotifyObservable.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="SpotifyPlaylistCollection.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="SpotifyLink.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="SpotifySession.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -45,21 +30,12 @@
     <ClInclude Include="SpotifySearch.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="SpotifyMetaobject.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="restify.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="SpotifyPlaylist.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="SpotifyPlaylistCollection.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="SpotifyTrack.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="SpotifyLink.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="SpotifySession.cpp">
@@ -69,6 +45,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="SpotifySearch.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SpotifyMetaobject.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

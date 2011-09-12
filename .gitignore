@@ -24,3 +24,5 @@ Release/*
 _ReSharper.*/*
 *.ReSharper.user
 
+
+TestResults/*

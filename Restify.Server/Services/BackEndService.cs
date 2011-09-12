@@ -32,14 +32,14 @@ namespace Restify.Services
         {
             var playlists = new List<RestifyPlaylist>();
 
-            foreach (var pl in SpotifyManager.Current.GetPlaylists())
-            {
-                playlists.Add(new RestifyPlaylist {
-                    Id = pl.Id,
-                    Title = pl.Title,
-                    Count = pl.Count,
-                });
-            }
+            //foreach (var pl in SpotifyManager.Current.GetPlaylists())
+            //{
+            //    playlists.Add(new RestifyPlaylist {
+            //        Id = pl.Id,
+            //        Title = pl.Title,
+            //        Count = pl.Count,
+            //    });
+            //}
 
             return playlists;
         }
@@ -48,16 +48,16 @@ namespace Restify.Services
         {
             var list = new List<RestifyTrack>();
             
-            var pl = SpotifyManager.Current.GetPlaylist(playlist.Id);
+            //var pl = SpotifyManager.Current.GetPlaylist(playlist.Id);
 
-            foreach (var track in pl.ToList())
-            {
-                list.Add(new RestifyTrack {
-                    Id = track.Id,
-                    Title = track.Title,
-                    Length = RestifyTrack.ToString(track.Length),
-                });
-            }
+            //foreach (var track in pl.ToList())
+            //{
+            //    list.Add(new RestifyTrack {
+            //        Id = track.Id,
+            //        Title = track.Title,
+            //        Length = RestifyTrack.ToString(track.Length),
+            //    });
+            //}
 
             return list;
         }

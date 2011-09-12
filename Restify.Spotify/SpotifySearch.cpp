@@ -12,12 +12,12 @@ namespace Restify
             if (sp_search_error(result) != SP_ERROR_OK)
                 return;
 
-            QueryHint = Unstringify(sp_search_did_you_mean(result));
+            QueryHint = unstringify(sp_search_did_you_mean(result));
 
             auto tracks = gcnew List<SpotifyTrack ^>();
             for (int i = 0; i < sp_search_num_tracks(result); i++)
             {
-                auto track = sp_search_track(result, i);
+                sp_track *track = sp_search_track(result, i);
                 tracks->Add(gcnew SpotifyTrack(track));
             }
 

@@ -34,8 +34,8 @@ namespace Restify.Services
             //  THIS FILE IS NOT SUPPOSED TO BE IN THE REPOSITORY
             //  AS IT CONTAINS SENSITIVE DATA!
             //
-            var spotify_user = SpotifyManager.FindFile("spotify_user");
-            if (!string.IsNullOrEmpty(spotify_user))
+            string spotify_user;
+            if (FileSystemManager.Current.FindFileName("spotify_user", out spotify_user))
             {
                 var credentials = File.ReadAllLines(spotify_user);
                 if (credentials.Length > 0)

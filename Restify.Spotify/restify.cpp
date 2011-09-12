@@ -21,7 +21,7 @@ bool sp_has_thread_access()
 // Managed to unmanaged (Spotfy strings) and vice versa
 //
 
-array<Byte> ^Stringify(String^ s)
+array<Byte> ^stringify(String^ s)
 {
     if (s == nullptr || s->Length == 0)
         return gcnew array<Byte>(1);
@@ -31,7 +31,7 @@ array<Byte> ^Stringify(String^ s)
     return cstr;
 }
 
-String ^Unstringify(const char *s)
+String ^unstringify(const char *s)
 {
     int byteCount = strlen(s);
     int charCount = Encoding::UTF8->GetCharCount((Byte *)const_cast<char *>(s), byteCount);

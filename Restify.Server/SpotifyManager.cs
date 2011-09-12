@@ -47,8 +47,8 @@ namespace Restify
             //  AS IT CONTAINS SENSITIVE DATA!
             //
 
-            var appkey_file = FindFile(spotify_appkey);
-            if (!string.IsNullOrEmpty(appkey_file))
+            string appkey_file;
+            if (FileSystemManager.Current.FindFileName(spotify_appkey, out appkey_file))
                 appkey = File.ReadAllBytes(appkey_file);
 #endif
 
@@ -57,25 +57,10 @@ namespace Restify
                 throw new FileNotFoundException(string.Format("Cannot find Spotify application key file '{0}'.", spotify_appkey), spotify_appkey);
             }
 
-            _session = new SpotifySession(appkey);
+            _session = new SpotifySession(new SpotifySessionConfiguration { ApplicationKey = appkey });
             _session.EndOfTrack += new Action(OnEndOfTrack);
 
             ThreadPool.QueueUserWorkItem(_ => _session.RunMessageLoop());
-        }
-
-        public static string FindFile(string fileName)
-        {
-            var currentPath = Environment.CurrentDirectory;
-            var currentRoot = Path.GetPathRoot(currentPath);
-            var currentFile = Path.Combine(currentPath, fileName);
-
-            while (currentFile.Length > currentRoot.Length && !File.Exists(currentFile))
-                currentFile = Path.Combine((currentPath = Path.GetDirectoryName(currentPath)), fileName);
-
-            if (File.Exists(currentFile))
-                return currentFile;
-
-            return null;
         }
 
         public bool IsLoggedIn { get; private set; }
@@ -87,7 +72,7 @@ namespace Restify
                 if (IsLoggedIn)
                     return true;
 
-                SpotifyError error = SpotifyError.BadUsernameOrPassword;
+                SpotifyError error = SpotifyError.SP_ERROR_BAD_USERNAME_OR_PASSWORD;
 
                 using (var wait = new ManualResetEventSlim())
                 {
@@ -108,21 +93,21 @@ namespace Restify
                     _session.LoggedIn -= loggedIn;
                 }
 
-                IsLoggedIn = error == SpotifyError.Ok;
+                IsLoggedIn = error == SpotifyError.SP_ERROR_OK;
 
                 return IsLoggedIn;
             }
         }
 
-        public List<SpotifyPlaylist> GetPlaylists()
-        {
-            return new List<SpotifyPlaylist>();
-        }
+        ////public List<SpotifyPlaylist> GetPlaylists()
+        //{
+        //    return new List<SpotifyPlaylist>();
+        //}
 
-        public SpotifyPlaylist GetPlaylist(string id)
-        {
-            return null;
-        }
+        //public SpotifyPlaylist GetPlaylist(string id)
+        //{
+        //    return null;
+        //}
 
         public RestifySearchResult Search(string query)
         {
@@ -211,9 +196,9 @@ namespace Restify
                     if (track != null)
                     {
                         _session.Post(() => {
-                            var trackLink = new SpotifyLink(track.Id);
+                            var trackMetaobject = (SpotifyTrack)_session.CreateMetaobject(track.Id);
                             _session.UnloadTrack();
-                            if (_session.LoadTrack(trackLink.CreateTrack()))
+                            if (_session.LoadTrack(trackMetaobject))
                             {
                                 _session.PlayTrack(true);
                                 _isPlaying = true;

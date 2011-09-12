@@ -8,7 +8,7 @@ namespace Restify
         {
         public:
             SpotifyException(int errorCode)
-                : Exception(Unstringify(sp_error_message((sp_error)errorCode)))
+                : Exception(unstringify(sp_error_message((sp_error)errorCode)))
             {
             }
         };

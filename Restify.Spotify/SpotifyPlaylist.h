@@ -4,7 +4,7 @@ namespace Restify
 {
     namespace Client
     {
-        public delegate void SpotifyPlaylistTracksEventHandler(SpotifyPlaylist^ pl, IList<SpotifyTrack ^> ^tracks);
+        //public delegate void SpotifyPlaylistTracksEventHandler(SpotifyPlaylist^ pl, IList<SpotifyTrack ^> ^tracks);
 
         public ref class SpotifyPlaylist
         {

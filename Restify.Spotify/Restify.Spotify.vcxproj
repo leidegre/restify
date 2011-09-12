@@ -72,24 +72,17 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="restify.cpp" />
+    <ClCompile Include="SpotifyMetaobject.cpp" />
     <ClCompile Include="SpotifySearch.cpp" />
     <ClCompile Include="SpotifySession.cpp" />
-    <ClCompile Include="SpotifyLink.cpp" />
-    <ClCompile Include="SpotifyPlaylist.cpp" />
-    <ClCompile Include="SpotifyPlaylistCollection.cpp" />
-    <ClCompile Include="SpotifyTrack.cpp" />
     <ClCompile Include="waveform.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="SpotifyMetaobject.h" />
     <ClInclude Include="SpotifySearch.h" />
     <ClInclude Include="SpotifySession.h" />
     <ClInclude Include="restify.h" />
     <ClInclude Include="SpotifyException.h" />
-    <ClInclude Include="SpotifyLink.h" />
-    <ClInclude Include="SpotifyObservable.h" />
-    <ClInclude Include="SpotifyPlaylistCollection.h" />
-    <ClInclude Include="SpotifyPlaylist.h" />
-    <ClInclude Include="SpotifyTrack.h" />
     <ClInclude Include="waveform.h" />
   </ItemGroup>
   <ItemGroup>

@@ -62,6 +62,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
+    <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Core" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.Runtime.Serialization" />
@@ -75,6 +76,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="FileSystemManager.cs" />
     <Compile Include="Services\RestifySearchResult.cs" />
     <Compile Include="Services\BackEndGatewayService.cs" />
     <Compile Include="Services\BackEndServiceClient.cs" />
