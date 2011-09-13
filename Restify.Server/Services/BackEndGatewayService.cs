@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.ServiceModel;
 using System.ServiceModel.Web;
+using System.Diagnostics;
 
 namespace Restify.Services
 {
@@ -96,7 +97,10 @@ namespace Restify.Services
             {
                 // only accept currently not queued tracks
                 if (pqset.Add(trackId))
+                {
                     pq.Enqueue(trackId);
+                    Trace.WriteLine(trackId, "Enqueue");
+                }
                 else
                     return;
             }
@@ -111,6 +115,7 @@ namespace Restify.Services
                 {
                     var trackId = pq.Dequeue();
                     pqset.Remove(trackId);
+                    Trace.WriteLine(trackId, "Dequeue");
                     return new RestifyTrack { Id = trackId };
                 }
             }

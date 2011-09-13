@@ -310,6 +310,8 @@ namespace Restify
                         while (Console.ReadKey(true).Key != ConsoleKey.S)
                             ;
                     }
+
+                    SpotifyManager.Current.Shutdown();
                 }
             }
             return exitCode;

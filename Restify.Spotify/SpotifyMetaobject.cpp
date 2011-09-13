@@ -46,6 +46,7 @@ namespace Restify
 
                 _isLoaded = true;
             }
+            _error = (SpotifyError)sp_track_error(_track);
         }
     }
 }

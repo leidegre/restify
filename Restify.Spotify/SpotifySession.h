@@ -30,8 +30,6 @@ namespace Restify
             Object ^_syncRoot;
             ConcurrentQueue<ISpotifyMessage ^> ^_queue;
 
-            waveform_api *_waveform;
-
         public:
             SpotifySession(SpotifySessionConfiguration ^configuration);
             ~SpotifySession();
@@ -47,16 +45,22 @@ namespace Restify
             void UnloadTrack();
             bool PrefetchTrack(SpotifyTrack ^track);
 
+            void Flush();
+
         internal:
+            void session_notify_main_thread();
+
             void session_logged_in(sp_error error);
             void session_logged_out();
+
             void session_connection_error(sp_error error);
-            void session_notify_main_thread();
+            
             void session_metadata_updated(sp_session *session);
             
-            int session_music_delivery(const sp_audioformat *format, const void *frames, int num_frames);
-            void session_end_of_track();
+            //int session_music_delivery(const sp_audioformat *format, const void *frames, int num_frames);
             
+            void session_end_of_track();
+
             void session_play_token_lost();
 
         public:

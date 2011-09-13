@@ -9,6 +9,7 @@ namespace Restify
         public interface class ISpotifyMetaobject
         {
             property bool IsLoaded { bool get(); };
+            property SpotifyError Error { SpotifyError get(); }
             void Update();
         };
 
@@ -17,6 +18,7 @@ namespace Restify
         private:
             sp_track *_track;
             bool _isLoaded;
+            SpotifyError _error;
             String ^_id;
             String ^_title;
             String ^_artist;
@@ -33,6 +35,7 @@ namespace Restify
 
         public:
             virtual property bool IsLoaded { bool get() { return _isLoaded; } }
+            virtual property SpotifyError Error { SpotifyError get() { return _error; } }
             virtual void Update();
 
             property String ^Id { String ^get() { return _id; } };

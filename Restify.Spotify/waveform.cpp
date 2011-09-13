@@ -4,17 +4,22 @@
 #include <windows.h>
 #include <stdio.h>
 
+#include "audio.h"
+
 #define trace(fmt, ...) \
     { char __buf[1024]; _snprintf_s(__buf, 1024, fmt, __VA_ARGS__); OutputDebugStringA(__buf); printf("%s", __buf); }
 
 struct waveform_api
 {
-    static const int    audio_buffer_chunk_count    = 256;
+    static const int    audio_buffer_chunk_count    = 64;
     static const int    audio_buffer_chunk_size     = sizeof(WAVEHDR) + 8 * 1024;
 
     HWAVEOUT            audio_dev;
-
     void               *audio_buffer;
+    
+    unsigned            sample_size;
+    unsigned            sample_count;
+    
     unsigned            audio_buffer_head;
     unsigned            audio_buffer_tail;
 };
@@ -35,17 +40,10 @@ bool waveform_init(waveform_api **waveform)
     return true;
 }
 
-void waveform_destroy(waveform_api *waveform)
-{
-    waveOutClose(waveform->audio_dev);
-    waveform->audio_dev = nullptr;
-}
-
 void waveform_reset(waveform_api *waveform)
 {
-    waveform->audio_buffer_head = 0;
-    waveform->audio_buffer_tail = 0;
-    waveOutReset(waveform->audio_dev);
+    MMRESULT result = waveOutReset(waveform->audio_dev);
+    trace("waveform_reset: %i (%u)\r\n", result == MMSYSERR_NOERROR, result);
 }
 
 int waveform_music_delivery(waveform_api *waveform, const sp_audioformat *format, const void *frames, int num_frames)
@@ -56,7 +54,11 @@ int waveform_music_delivery(waveform_api *waveform, const sp_audioformat *format
         return 0; // no audio output
 
     if (num_frames == 0)
-        return 0; // audio discontinuity, do nothing
+    {
+        // a discontinuity has occurred (such as after a seek)
+        waveform_reset(waveform);
+        return 0; 
+    }
 
     //static LARGE_INTEGER freq;
     //static BOOL _freq = QueryPerformanceFrequency(&freq);
@@ -80,6 +82,7 @@ int waveform_music_delivery(waveform_api *waveform, const sp_audioformat *format
         if (waveOutOpen(&waveOut, WAVE_MAPPER, &fmt, NULL, NULL, CALLBACK_NULL) == MMSYSERR_NOERROR)
         {
             waveform->audio_dev = waveOut;
+            waveform->sample_size = fmt.nBlockAlign;
         }
     }
 
@@ -94,8 +97,12 @@ int waveform_music_delivery(waveform_api *waveform, const sp_audioformat *format
         pBuffer     = (PCHAR)p + sizeof(WAVEHDR);
         wave        = (WAVEHDR *)p;
 
+        // this is fine, if the `waveOutUnprepareHeader` lags behind libspotify will back off
+        // if we try to loop here to catch up there will be stutter (this we don't want)
         if (waveOutUnprepareHeader(waveform->audio_dev, wave, sizeof(WAVEHDR)) != WAVERR_STILLPLAYING)
         {
+            unsigned sample_count = wave->dwBufferLength / (2 * format->channels);
+            waveform->sample_count -= sample_count;
             waveform->audio_buffer_tail++;
         }
     }
@@ -103,7 +110,7 @@ int waveform_music_delivery(waveform_api *waveform, const sp_audioformat *format
     // set initial generic error 
     // it's not an actual error but we wan't a single point of exit to this function, 
     // this simplifies the control flow a bit
-    result = MMSYSERR_ERROR; 
+    result = MMSYSERR_ERROR;
 
     if (frameBufferCount < waveform_api::audio_buffer_chunk_count)
     {
@@ -121,15 +128,23 @@ int waveform_music_delivery(waveform_api *waveform, const sp_audioformat *format
         RtlCopyMemory(pBuffer, frames, num_frames * (2 * format->channels));
 
         if ((result = waveOutPrepareHeader(waveform->audio_dev, wave, sizeof(WAVEHDR))) == MMSYSERR_NOERROR)
-            result = waveOutWrite(waveform->audio_dev, wave, sizeof(WAVEHDR));
+            if ((result = waveOutWrite(waveform->audio_dev, wave, sizeof(WAVEHDR))) == MMSYSERR_NOERROR)
+                waveform->sample_count += num_frames;
     }
             
     //QueryPerformanceCounter(&t);
     //trace("waveform_music_delivery frameBufferCount: %5u dT=%6llu us\r\n", frameBufferCount, ((1000 * 1000) * (t.QuadPart - t0.QuadPart)) / freq.QuadPart);
             
+    //trace("music_delivery: sample_count=%u\r\n", waveform->sample_count);
+
     // returning 0 is bad libspotify will just callback at a later time 
     // but since the device is broken we cannot really do anything...
     return result == MMSYSERR_NOERROR ? num_frames : 0;
+}
+
+int waveform_get_sample_count(waveform_api *waveform)
+{
+    return (int)waveform->sample_count;
 }
 
 void waveform_pause(waveform_api *waveform)
@@ -140,4 +155,9 @@ void waveform_pause(waveform_api *waveform)
 void waveform_play(waveform_api *waveform)
 {
     waveOutRestart(waveform->audio_dev);
+}
+
+void waveform_destroy(waveform_api *waveform)
+{
+    waveOutClose(waveform->audio_dev);
 }

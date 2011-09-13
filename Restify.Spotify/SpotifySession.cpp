@@ -5,10 +5,6 @@ namespace Restify
 {
     namespace Client
     {
-        //
-        // Session callbacks
-        //
-
         delegate void sp_action();
         delegate void sp_action_sp_session_(sp_session *session);
         delegate void sp_action_sp_error_(sp_error error);
@@ -17,24 +13,56 @@ namespace Restify
         typedef void (__stdcall *sp_interop_session)(sp_session *session);
         typedef void (__stdcall *sp_interop_error)(sp_error error);
 
-        struct sp_userdata {
+        struct re_userdata {
             gcroot<SpotifySession ^> *session;
+            waveform_api *waveform;
             sp_interop notify_main_thread;
             sp_interop_error logged_in;
         };
+    }
+        
+    // audio
+    namespace Client
+    {
 
-        /* network threads
-        session.notify_main_thread
-        session.end_of_track
-        session.music_delivery
-        session.start_playback
-        session.stop_playback
-        session.get_audio_buffer_stats
-        */
+        int SP_CALLCONV re_session_music_delivery(sp_session *session, const sp_audioformat *format, const void *frames, int num_frames)
+        {
+            re_userdata *userdata = static_cast<re_userdata *>(sp_session_userdata(session));
+            return waveform_music_delivery(userdata->waveform, format, frames, num_frames);
+        }
 
+        void SP_CALLCONV re_session_get_audio_buffer_stats(sp_session *session, sp_audio_buffer_stats *stats)
+        {
+            re_userdata *userdata = static_cast<re_userdata *>(sp_session_userdata(session));
+            stats->stutter = 0; // wow, are we really that good?
+            stats->samples = waveform_get_sample_count(userdata->waveform);
+        }
+
+        void SP_CALLCONV re_session_start_playback(sp_session *session)
+        {
+            re_userdata *userdata = static_cast<re_userdata *>(sp_session_userdata(session));
+            waveform_play(userdata->waveform);
+        }
+
+        void SP_CALLCONV re_session_stop_playback(sp_session *session)
+        {
+            re_userdata *userdata = static_cast<re_userdata *>(sp_session_userdata(session));
+            waveform_pause(userdata->waveform);
+        }
+
+        void SpotifySession::Flush()
+        {
+            sp_get_thread_access();
+            re_userdata *userdata = static_cast<re_userdata *>(sp_session_userdata(_session));
+            waveform_reset(userdata->waveform);
+        }
+    }
+    
+    namespace Client
+    {
         void SP_CALLCONV sp_session_notify_main_thread(sp_session *session)
         {
-            sp_userdata *userdata = static_cast<sp_userdata *>(sp_session_userdata(session));
+            re_userdata *userdata = static_cast<re_userdata *>(sp_session_userdata(session));
             userdata->notify_main_thread();
         }
 
@@ -51,13 +79,13 @@ namespace Restify
         gcroot<SpotifySession ^> GetSpotifySession(sp_session* session)
         {
             // NOTE: this is a thread-safe operation (or it has to be, otherwise very little would be possible)
-            sp_userdata *userdata = static_cast<sp_userdata *>(sp_session_userdata(session));
+            re_userdata *userdata = static_cast<re_userdata *>(sp_session_userdata(session));
             return *userdata->session;
         }
 
         void SP_CALLCONV sp_session_logged_in(sp_session *session, sp_error error)
         {
-            sp_userdata *userdata = static_cast<sp_userdata *>(sp_session_userdata(session));
+            re_userdata *userdata = static_cast<re_userdata *>(sp_session_userdata(session));
             userdata->logged_in(error);
             //GetSpotifySession(session)->session_logged_in(error);
         }
@@ -85,16 +113,6 @@ namespace Restify
         void SpotifySession::session_connection_error(sp_error error)
         {
             ConnectionError((SpotifyError)error);
-        }
-
-        int SP_CALLCONV sp_session_music_delivery(sp_session *session, const sp_audioformat *format, const void *frames, int num_frames)
-        {
-            return GetSpotifySession(session)->session_music_delivery(format, frames, num_frames);
-        }
-
-        int SpotifySession::session_music_delivery(const sp_audioformat *format, const void *frames, int num_frames)
-        {
-            return waveform_music_delivery(_waveform, format, frames, num_frames);
         }
 
         void SP_CALLCONV sp_session_end_of_track(sp_session *session)
@@ -134,14 +152,18 @@ namespace Restify
             
             sp_session_callbacks *callbacks = new sp_session_callbacks;
             RtlZeroMemory(callbacks, sizeof(sp_session_callbacks));
+            callbacks->notify_main_thread = &sp_session_notify_main_thread;
             callbacks->logged_in = &sp_session_logged_in;
             callbacks->logged_out = &sp_session_logged_out;
             callbacks->connection_error = &sp_session_connection_error;
-            callbacks->notify_main_thread = &sp_session_notify_main_thread;
-            callbacks->music_delivery = &sp_session_music_delivery;
+            // audio
+            callbacks->music_delivery = &re_session_music_delivery;
+            callbacks->get_audio_buffer_stats = &re_session_get_audio_buffer_stats;
+            callbacks->start_playback = &re_session_start_playback;
+            callbacks->stop_playback = &re_session_stop_playback;
+            callbacks->metadata_updated = dtof<sp_interop_session>(_metadataUpdated);
             callbacks->end_of_track = &sp_session_end_of_track;
             callbacks->play_token_lost = &sp_session_play_token_lost;
-            callbacks->metadata_updated = dtof<sp_interop_session>(_metadataUpdated);
 
             sp_session_config *config = new sp_session_config;
             RtlZeroMemory(config, sizeof(sp_session_config));
@@ -155,8 +177,9 @@ namespace Restify
             config->application_key_size = configuration->ApplicationKey->Length;
             config->user_agent = "RESTify";
 
-            sp_userdata *userdata = new sp_userdata;
+            re_userdata *userdata = new re_userdata;
             userdata->session = root;
+            waveform_init(&userdata->waveform);
             userdata->notify_main_thread = (sp_interop)System::Runtime::InteropServices::Marshal::GetFunctionPointerForDelegate(_callback).ToPointer();
             userdata->logged_in = (sp_interop_error)System::Runtime::InteropServices::Marshal::GetFunctionPointerForDelegate(_loggedIn).ToPointer();
             config->userdata = userdata;
@@ -176,15 +199,16 @@ namespace Restify
             // Yeah, the constructor can leak memory however, in it's current state, 
             // libspotify doesn't support multiple sessions per process
             
-            waveform_api *waveform;
-            if (waveform_init(&waveform))
-                _waveform = waveform;
-            
             _session = session;
         }
 
         SpotifySession::~SpotifySession()
         {
+            if (_session != nullptr)
+            {
+                sp_session_release(_session);
+                _session = nullptr;
+            }
         }
 
         //
@@ -225,33 +249,11 @@ namespace Restify
 
         bool SpotifySession::LoadTrack(SpotifyTrack ^track)
         {
+            if (track == nullptr)
+                throw gcnew ArgumentNullException("track");
             sp_get_thread_access();
-            
-            sp_error error;
-
-            // hmm...
-
-            int retry_count = 0;
-            while (!sp_track_is_available(_session, track->get_track()))
-            {
-                if (retry_count == 0 && (error = sp_session_player_prefetch(_session, track->get_track())) != SP_ERROR_OK)
-                {
-                    trace("!sp_track_is_available: cannot prefetch track (%u)\r\n", error);
-                    break;
-                }
-
-                if (retry_count++ > 5)
-                    break;
-                
-                trace("!sp_track_is_available: %i\r\n", retry_count)
-
-                Sleep(1000);
-            }
-            
-            error = sp_session_player_load(_session, track->get_track());
-
-            trace("sp_session_player_load: %i (%u)\r\n", error == SP_ERROR_OK, error)
-
+            sp_error error = sp_session_player_load(_session, track->get_track());
+            trace("sp_session_player_load: %i (%u)\r\n", error == SP_ERROR_OK, error);
             return error == SP_ERROR_OK;
         }
 
@@ -259,10 +261,6 @@ namespace Restify
         {
             sp_get_thread_access();
             sp_session_player_play(_session, play);
-            if (play)
-                waveform_play(_waveform);
-            else
-                waveform_pause(_waveform);
         }
 
         void SpotifySession::SeekTrack(int offset)
@@ -274,7 +272,6 @@ namespace Restify
         void SpotifySession::UnloadTrack()
         {
             sp_get_thread_access();
-            waveform_reset(_waveform);
             sp_session_player_unload(_session);
         }
 
@@ -443,7 +440,7 @@ namespace Restify
                 Monitor::Exit(_syncRoot);
                 
                 //
-                // Process external events
+                // Process managed events
                 //
                 ISpotifyMessage ^msg;
                 while (SpotifySession::_queue->TryDequeue(msg))

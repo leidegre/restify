@@ -11,7 +11,10 @@ namespace Restify
 {
     public class SpotifyTestClient : IDisposable
     {
-        SpotifySession session;
+        private const int DefaultTimeout = 30 * 1000;
+
+        private SpotifySession session;
+        private Thread messageLoopThread;
 
         public SpotifyTestClient()
         {
@@ -22,7 +25,8 @@ namespace Restify
             session = new SpotifySession(new SpotifySessionConfiguration { ApplicationKey = File.ReadAllBytes(appkey_path) });
             session.MetadataUpdated += new Action(session_MetadataUpdated);
             
-            System.Threading.ThreadPool.QueueUserWorkItem(_ => { session.RunMessageLoop(); });
+            messageLoopThread = new System.Threading.Thread(() => { session.RunMessageLoop(); });
+            messageLoopThread.Start();
         }
 
         struct MetaobjectQuery
@@ -86,8 +90,8 @@ namespace Restify
                     session.Post(() => {
                         session.Login(credentials[0], credentials[1], false);
                     });
-                    
-                    waitHandle.Wait();
+
+                    waitHandle.Wait(DefaultTimeout);
                     
                     session.LoggedIn -= loggedIn;
 
@@ -108,7 +112,8 @@ namespace Restify
                 using (var waitHandle = new ManualResetEventSlim())
                 {
                     metaobjectQueue.Add(new MetaobjectQuery { obj = metaobject, waitHandle = waitHandle });
-                    waitHandle.Wait();
+                    if (!waitHandle.Wait(DefaultTimeout))
+                        return null; // timeout
                 }
             }
             return metaobject;
@@ -118,9 +123,28 @@ namespace Restify
         {
             if (session != null)
             {
+                session.StopMessageLoop();
+
+                messageLoopThread.Join();
+
                 session.Dispose();
                 session = null;
             }
+        }
+
+        public void Play(SpotifyTrack track)
+        {
+            session.Post(() => {
+                if (session.LoadTrack(track))
+                    session.PlayTrack(true);
+            });
+        }
+
+        public void Play(bool play)
+        {
+            session.Post(() => {
+                session.PlayTrack(play);
+            });
         }
     }
 }

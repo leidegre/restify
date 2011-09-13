@@ -16,3 +16,17 @@
     and the second line is your password (the password is optional)
     but you won't be automatically logged in if you don't enter a password in this file
     (this is to simplify testing until a "remember me" feature is implemented properly)
+
+Good to know
+
+    Methods that block like `CreateMetaobject` must never be called from the 
+    message loop thread.
+
+    session.Post(() => {
+        session.CreateMetaobject("..."); // this will dead-lock (or time-out)
+    })
+
+    Never write code like the above.
+
+    This will block message loop itself and not events will be processed
+    the metadata will arrive too late and nothing will happen.

@@ -78,6 +78,7 @@
     <ClCompile Include="waveform.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="audio.h" />
     <ClInclude Include="SpotifyMetaobject.h" />
     <ClInclude Include="SpotifySearch.h" />
     <ClInclude Include="SpotifySession.h" />

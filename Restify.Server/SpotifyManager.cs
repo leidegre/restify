@@ -6,6 +6,7 @@ using System.Threading;
 using Restify.Client;
 using System.IO;
 using Restify.Services;
+using System.Collections.Concurrent;
 
 namespace Restify
 {
@@ -13,7 +14,7 @@ namespace Restify
     {
         public static SpotifyManager Current { get; private set; }
 
-        private static TimeSpan _defaultTimeout = new TimeSpan(30 * TimeSpan.TicksPerSecond);
+        private const int _defaultTimeout = 30 * 1000;
 
         static SpotifyManager()
         {
@@ -23,7 +24,8 @@ namespace Restify
         // We do no't expose the `SpotifySession` object directly
         // the manager needs to be thread safe because it's being invoked through
         // WCF service requests
-        SpotifySession _session;
+        private SpotifySession _session;
+        private Thread _sessionMessageLoopThread;
 
         private SpotifyManager()
         {
@@ -58,9 +60,67 @@ namespace Restify
             }
 
             _session = new SpotifySession(new SpotifySessionConfiguration { ApplicationKey = appkey });
-            _session.EndOfTrack += new Action(OnEndOfTrack);
+            _session.MetadataUpdated += new Action(OnMetadataUpdated);
+            _session.EndOfTrack += () => { OnEndOfTrack(false); };
 
-            ThreadPool.QueueUserWorkItem(_ => _session.RunMessageLoop());
+            _sessionMessageLoopThread = new Thread(() => {
+                _session.RunMessageLoop();
+            });
+            _sessionMessageLoopThread.Start();
+        }
+
+
+        struct MetaobjectQuery
+        {
+            public ISpotifyMetaobject obj;
+            public ManualResetEventSlim evt;
+        }
+
+        private ConcurrentBag<MetaobjectQuery> metaobjectQueue = new ConcurrentBag<MetaobjectQuery>();
+
+        void OnMetadataUpdated()
+        {
+            _session.Post(() => {
+
+                var list = new List<MetaobjectQuery>();
+
+                MetaobjectQuery item;
+                while (metaobjectQueue.TryTake(out item))
+                    list.Add(item);
+
+                for (int i = 0; i < list.Count; i++)
+                {
+                    item = list[i];
+                    item.obj.Update();
+                    if (item.obj.IsLoaded)
+                    {
+                        list.RemoveAt(i--);
+                        item.evt.Set();
+                    }
+                }
+
+                for (int i = 0; i < list.Count; i++)
+                    metaobjectQueue.Add(list[i]);
+
+            });
+        }
+
+        public ISpotifyMetaobject CreateMetaobject(string spotifyUri)
+        {
+            ISpotifyMetaobject metaobject = null;
+            _session.PostSynchronized(() => {
+                metaobject = _session.CreateMetaobject(spotifyUri);
+            });
+            if (metaobject != null && !metaobject.IsLoaded)
+            {
+                using (var evt = new ManualResetEventSlim())
+                {
+                    metaobjectQueue.Add(new MetaobjectQuery { obj = metaobject, evt = evt });
+                    if (!evt.Wait(_defaultTimeout))
+                        return null; // timeout
+                }
+            }
+            return metaobject;
         }
 
         public bool IsLoggedIn { get; private set; }
@@ -167,7 +227,7 @@ namespace Restify
             _session.Post(() => _session.PlayTrack(true));
             if (currentTrack == null)
             {
-                OnEndOfTrack(); // grab a track
+                OnEndOfTrack(false); // grab a track
             }
         }
 
@@ -180,10 +240,10 @@ namespace Restify
 
         public void Next()
         {
-            OnEndOfTrack();
+            OnEndOfTrack(true);
         }
 
-        void OnEndOfTrack()
+        void OnEndOfTrack(bool flush)
         {
             if (Program.InstanceName != null)
             {
@@ -193,27 +253,51 @@ namespace Restify
                     
                     currentTrack = track;
                     
-                    if (track != null)
-                    {
-                        _session.Post(() => {
-                            var trackMetaobject = (SpotifyTrack)_session.CreateMetaobject(track.Id);
-                            _session.UnloadTrack();
-                            if (_session.LoadTrack(trackMetaobject))
-                            {
-                                _session.PlayTrack(true);
-                                _isPlaying = true;
-                            }
-                            else
-                            {
-                                currentTrack = null;
-                                _isPlaying = false;
-                            }
-                        });
-                    }
+                    if (track == null)
+                        return;
+
+                    var trackMetaobject = (SpotifyTrack)CreateMetaobject(track.Id);
+                    if (trackMetaobject == null)
+                        return;
+
+                    _session.Post(() => {
+                        if (flush)
+                            // this causes a discontinuity in the audio buffer 
+                            // which will flush the audio buffer immediately
+                            _session.Flush();
+                        _session.UnloadTrack();
+                        if (_session.LoadTrack(trackMetaobject))
+                        {
+                            _session.PlayTrack(true);
+                            _isPlaying = true;
+                        }
+                        else
+                        {
+                            currentTrack = null;
+                            _isPlaying = false;
+                        }
+                    });
                 }
             }
         }
 
         #endregion
+
+        public void Shutdown()
+        {
+            if (_session != null)
+            {
+                _session.StopMessageLoop();
+
+                if (_sessionMessageLoopThread != null)
+                {
+                    _sessionMessageLoopThread.Join();
+                    _sessionMessageLoopThread = null;
+                }
+
+                _session.Dispose();
+                _session = null;
+            }
+        }
     }
 }

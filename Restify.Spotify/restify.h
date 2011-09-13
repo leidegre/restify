@@ -8,7 +8,7 @@
 #define trace(fmt, ...) \
     { char __buf[1024]; _snprintf_s(__buf, 1024, fmt, __VA_ARGS__); OutputDebugStringA(__buf); printf("%s", __buf); }
 
-#include "waveform.h"
+#include "audio.h"
 
 #include <vcclr.h> // gcroot
 #include <msclr/lock.h> // lock
@@ -78,6 +78,7 @@ inline
 T dtof(Delegate ^d)
 {
     using namespace System::Runtime::InteropServices;
+    GCHandle::Alloc(d); // prevent delegate from being garbage collected (this is leaky, yes, but by design)
     IntPtr fp = Marshal::GetFunctionPointerForDelegate(d);
     return static_cast<T>(fp.ToPointer());
 }
