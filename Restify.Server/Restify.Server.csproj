@@ -21,7 +21,7 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
+    <OutputPath>..\bin\Debug\server\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -62,10 +62,15 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
-    <Reference Include="System.ComponentModel.Composition" />
+    <Reference Include="System.ComponentModel.Composition.Codeplex">
+      <HintPath>..\lib\System.ComponentModel.Composition.Codeplex.dll</HintPath>
+    </Reference>
     <Reference Include="System.Core" />
+    <Reference Include="System.Data.Entity" />
+    <Reference Include="System.Data.SqlServerCe, Version=4.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Security" />
     <Reference Include="System.ServiceModel" />
     <Reference Include="System.ServiceModel.Web" />
     <Reference Include="System.Windows.Forms" />
@@ -76,16 +81,23 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="FileSystemManager.cs" />
-    <Compile Include="Services\RestifySearchResult.cs" />
-    <Compile Include="Services\BackEndGatewayService.cs" />
-    <Compile Include="Services\BackEndServiceClient.cs" />
-    <Compile Include="Services\RestifyLoginRequest.cs" />
-    <Compile Include="Services\RestifyLoginResponse.cs" />
-    <Compile Include="Services\RestifyPlaylistRequest.cs" />
-    <Compile Include="Services\RestifyTrack.cs" />
-    <Compile Include="Services\RestifyTrackRequest.cs" />
-    <Compile Include="Services\SpotifyInstance.cs" />
+    <Compile Include="Data\PersistentService.cs" />
+    <Compile Include="Server\ClientContainer.cs" />
+    <Compile Include="Server\ClientLoginProxy.cs" />
+    <Compile Include="Server\ClientProxy.cs" />
+    <Compile Include="ServiceModel\BackEndGatewayService.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ServiceModel\BackEndServiceClient.cs" />
+    <Compile Include="ServiceModel\FrontEndService.cs" />
+    <Compile Include="ServiceModel\IFrontEndService.cs" />
+    <Compile Include="ServiceModel\LoginService.cs" />
+    <Compile Include="ServiceModel\QueueService.cs" />
+    <Compile Include="ServiceModel\RestifyPlaylist.cs" />
+    <Compile Include="ServiceModel\RestifyPlaylistCollection.cs" />
+    <Compile Include="ServiceModel\RestifyPlaylistRequest.cs" />
+    <Compile Include="ServiceModel\RestifyTrackRequest.cs" />
+    <Compile Include="ServiceModel\RestifyViewModel.cs" />
     <Compile Include="Threading\ThreadContext.cs" />
     <Compile Include="Threading\CreateMutexMessage.cs" />
     <Compile Include="Threading\DelegateMessage.cs" />
@@ -94,26 +106,23 @@
     <Compile Include="Threading\ReleaseMutexMessage.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Services\BackEndService.cs" />
-    <Compile Include="Services\FrontEndService.cs" />
-    <Compile Include="Services\IBackEndService.cs" />
-    <Compile Include="Services\IFrontEndService.cs" />
-    <Compile Include="Services\ILoginService.cs" />
-    <Compile Include="Services\LoginService.cs" />
-    <Compile Include="Services\RestifyPlaylist.cs" />
-    <Compile Include="Services\RestifyPlaylistCollection.cs" />
-    <Compile Include="Services\RestifyViewModel.cs" />
-    <Compile Include="SpotifyManager.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Restify.Spotify\Restify.Spotify.vcxproj">
-      <Project>{654FD394-FE7B-491E-8126-13711A1EE5FC}</Project>
-      <Name>Restify.Spotify</Name>
+    <ProjectReference Include="..\Restify.Core\Restify.Core.csproj">
+      <Project>{9CE0441C-4398-403B-AE90-1C48CF5094F8}</Project>
+      <Name>Restify.Core</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config">
       <SubType>Designer</SubType>
+    </None>
+    <Content Include="Data\Schema\Queue.TrackUniqueness.sql">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <None Include="Data\spotify-uri-summary.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>spotify-uri-summary.txt</LastGenOutput>
     </None>
     <None Include="debugger-disable.reg" />
     <None Include="debugger-enable.reg" />
@@ -122,15 +131,53 @@
     <None Include="urlaclrm.bat" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Content\index.htm" />
-    <Content Include="Content\jquery-1.4.2.min.js" />
-    <Content Include="Content\jquery-1.6.2.min.js" />
-    <Content Include="Content\jquery-tmpl.js" />
-    <Content Include="Content\knockout-1.2.1.js" />
-    <Content Include="Content\restify.js" />
-    <Content Include="Content\spotify-core-logo-128x128.png" />
-    <Content Include="Content\stylesheet.css" />
+    <Content Include="Content\index.htm">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Content\jquery-1.4.2.min.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Content\jquery-1.6.2.min.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Content\jquery-tmpl.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Content\knockout-1.2.1.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Content\restify.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Content\spotify-core-logo-128x128.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Content\stylesheet.css">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Data\Schema\Queue.sql">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Data\Schema\Session.sql">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Data\Schema\User.sql">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Data\Schema\README.TXT" />
+    <Content Include="Data\Schema\Version.sql">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Data\spotify-uri-summary.txt">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>spotify-uri-summary.tt</DependentUpon>
+    </Content>
+    <Content Include="Data\spotify-uri-data.txt" />
     <Content Include="README.TXT" />
+  </ItemGroup>
+  <ItemGroup>
+    <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
