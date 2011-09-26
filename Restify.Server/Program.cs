@@ -60,18 +60,6 @@ namespace Restify
             return RunController();
         }
 
-        public static MessageQueue MessageQueue { get; private set; }
-
-        public static void Post(IMessage msg)
-        {
-            MessageQueue.Post(msg);
-        }
-
-        public static void PostSynchronized(IMessage msg)
-        {
-            MessageQueue.PostSynchronized(msg);
-        }
-
         class AccessControlDispatchMessageInspector : IDispatchMessageInspector
         {
             public object AfterReceiveRequest(ref System.ServiceModel.Channels.Message request, IClientChannel channel, InstanceContext instanceContext)
@@ -114,8 +102,6 @@ namespace Restify
 
         public static int RunController()
         {
-            MessageQueue = new MessageQueue();
-
             Trace.WriteLine("Configuring data store...");
 
             var catalog = new AggregateCatalog(new AssemblyCatalog(typeof(Program).Assembly), new DirectoryCatalog(Environment.CurrentDirectory));
@@ -126,6 +112,8 @@ namespace Restify
                 .Initialize();
 
             Trace.WriteLine("OK");
+
+            var messageQueue = container.GetExportedValue<IMessageQueue>();
 
             using (var composableServiceBoot = new ComposableServiceBoot(container, BaseEndpoint))
             {
@@ -140,7 +128,7 @@ namespace Restify
                     while (Console.ReadKey(true).Key != ConsoleKey.S)
                         ;
                     // TODO: clean up running instances
-                    MessageQueue.PostQuit(0);
+                    messageQueue.PostQuit(0);
                 });
 
                 // Launch using default browser
@@ -148,7 +136,7 @@ namespace Restify
                 // ...or click this from within Visual Studio: 
                 //      http://localhost/restify/
 
-                return MessageQueue.RunMessageLoop();
+                return messageQueue.RunMessageLoop();
             }
         }
     }

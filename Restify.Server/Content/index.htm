@@ -34,7 +34,7 @@
     
         <form action="#search" data-bind="submit: search">
             
-            <input id="search-textbox" type="text" data-bind="value: searchText, valueUpdate: 'afterkeydown'" />
+            <input id="search-textbox" type="text" data-bind="value: searchText, valueUpdate: 'afterkeydown'" /> <input type="image" src="spotify-search-button-32x32.png" />
 
         </form>
 
@@ -164,7 +164,7 @@
             this.search = function () {
                 var m = searchTrackId.exec(this.searchText())
                 if (m) {
-                    $.JSON("PUT", "/restify/gateway/queue/" + encodeURIComponent("spotify:track:" + m[1]));
+                    $.JSON("PUT", "/restify/master/queue/" + encodeURIComponent("spotify:track:" + m[1]));
                     this.searchText(null);
                 } else {
                     $.postJSON("/restify/user/" + this.instanceName + "/search?q=" + encodeURIComponent(this.searchText()), undefined, function (data) {
@@ -179,11 +179,11 @@
             }
 
             this.playPause = function () {
-                $.postJSON("/restify/gateway/playback/playPause");
+                $.postJSON("/restify/master/playback/playPause");
             }
 
             this.next = function () {
-                $.postJSON("/restify/gateway/playback/next");
+                $.postJSON("/restify/master/playback/next");
             }
 
 //            var self = this;

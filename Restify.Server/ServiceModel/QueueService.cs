@@ -6,6 +6,7 @@ using System.ComponentModel.Composition;
 using Restify.ServiceModel.Composition;
 using System.Diagnostics;
 using Restify.Server;
+using Restify.Data;
 
 namespace Restify.ServiceModel
 {
@@ -36,7 +37,9 @@ namespace Restify.ServiceModel
                 else
                     return;
             }
-            container.Play(); // TODO: this is a wrong, as we only want to play if we queue up a song for the first time
+            var agent = container.GetPlayToken();
+            using (var client = agent.GetService<IClientService>())
+                client.Play(); // TODO: this is a wrong, as we only want to play if we queue up a song for the first time
         }
 
         public string Dequeue()

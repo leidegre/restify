@@ -19,6 +19,11 @@ namespace Restify.ServiceModel
             this.spotifyClient = spotifyClient;
         }
 
+        public string Ping()
+        {
+            throw new NotImplementedException();
+        }
+
         public LoginResponse Login(LoginRequest login)
         {
             return new LoginResponse{

@@ -11,6 +11,21 @@ namespace Restify.ServiceModel.Composition
 {
     public class ComposableInstanceProvider : IInstanceProvider
     {
+        class AttributedPartCatalog : ComposablePartCatalog
+        {
+            IQueryable<ComposablePartDefinition> parts;
+
+            public override IQueryable<ComposablePartDefinition> Parts
+            {
+                get { return parts; }
+            }
+
+            public AttributedPartCatalog(params Type[] types)
+            {
+                this.parts = (from type in types select AttributedModelServices.CreatePartDefinition(type, null)).ToList().AsQueryable();
+            }
+        }
+
         private CompositionContainer container;
         private ContractBasedImportDefinition importDefinition;
 
@@ -21,7 +36,7 @@ namespace Restify.ServiceModel.Composition
             this.importDefinition = new ContractBasedImportDefinition(contractName, typeIdentity, null, ImportCardinality.ExactlyOne, false, true, CreationPolicy.NonShared);
         }
 
-        private Export GetExport()
+        private Export GetExport(CompositionContainer container)
         {
             return container.GetExports(importDefinition).First();
         }
@@ -33,7 +48,10 @@ namespace Restify.ServiceModel.Composition
 
         public object GetInstance(System.ServiceModel.InstanceContext instanceContext)
         {
-            var export = GetExport();
+            var catalog2 = new AttributedPartCatalog(typeof(ComposableServiceContext));
+            var container2 = new CompositionContainer(new AggregateCatalog(catalog2, container.Catalog));
+            container2.ComposeParts(new ComposableServiceContext(System.ServiceModel.Web.WebOperationContext.Current));
+            var export = GetExport(container2);
             return export.Value;
         }
 

@@ -98,9 +98,11 @@
     <Compile Include="ServiceModel.Composition\ComposableServiceExportAttribute.cs" />
     <Compile Include="ServiceModel.Composition\ComposableServiceHost.cs" />
     <Compile Include="ServiceModel.Composition\IComposableServiceMetadata.cs" />
+    <Compile Include="ServiceModel.Composition\ComposableServiceContext.cs" />
     <Compile Include="ServiceModel\IClientService.cs" />
     <Compile Include="ServiceModel\ILoginService.cs" />
     <Compile Include="ServiceModel\IQueueService.cs" />
+    <Compile Include="ServiceModel\IServiceContext.cs" />
     <Compile Include="ServiceModel\LoginRequest.cs" />
     <Compile Include="ServiceModel\LoginResponse.cs" />
     <Compile Include="ServiceModel\SearchResult.cs" />

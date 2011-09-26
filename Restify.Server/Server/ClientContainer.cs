@@ -81,30 +81,30 @@ namespace Restify.Server
 #endif
         }
 
-        private IClient Create(string user, string uuid)
+        private IClient Create(string userName, string uuid)
         {
             var clientExport = ClientFactory.CreateExport();
 
-            Trace.WriteLine(string.Format("Creating new instance for user '{0}'", user));
+            Trace.WriteLine(string.Format("Creating new instance for user '{0}'", userName));
 
             var client = clientExport.Value;
 
             client.Initialize(uuid);
 
-            Trace.WriteLine(string.Format("New instance '{1}' for user '{0}' created", user, uuid));
+            Trace.WriteLine(string.Format("New instance '{1}' for user '{0}' created", userName, uuid));
 
-            userMapping.Add(user, uuid);
+            userMapping.Add(userName, uuid);
             uuidMapping.Add(uuid, new Item(false, client));
 
             return client;
         }
 
-        public IClient Create(string user)
+        public IClient Create(string userName)
         {
             lock (this)
             {
                 string uuid;
-                if (userMapping.TryGetValue(user, out uuid))
+                if (userMapping.TryGetValue(userName, out uuid))
                     return uuidMapping[uuid].Value;
 
                 using (var rng = new RNGCryptoServiceProvider())
@@ -114,7 +114,7 @@ namespace Restify.Server
                     uuid = Base16.Encode(uuidBytes);
                 }
 
-                return Create(user, uuid);
+                return Create(userName, uuid);
             }
         }
 
@@ -132,7 +132,7 @@ namespace Restify.Server
             }
         }
 
-        private IClient GetCurrentAgent()
+        public IClient GetPlayToken()
         {
             lock (this)
             {
@@ -149,7 +149,21 @@ namespace Restify.Server
 
         public void Play()
         {
-            var agent = GetCurrentAgent();
+            var agent = GetPlayToken();
+            using (var control = agent.GetService<IClientService>())
+                control.Play();
+        }
+
+        public void PlayPause()
+        {
+            var agent = GetPlayToken();
+            using (var control = agent.GetService<IClientService>())
+                control.PlayPause();
+        }
+
+        public void Next()
+        {
+            var agent = GetPlayToken();
             using (var control = agent.GetService<IClientService>())
                 control.Play();
         }

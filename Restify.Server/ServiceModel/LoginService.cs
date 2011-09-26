@@ -20,17 +20,24 @@ namespace Restify.ServiceModel
     [ComposableServiceExport("/restify/auth", typeof(LoginService))]
     public class LoginService : ILoginService
     {
-        public IClientContainer ClientContainer { get; private set; }
+        private IClientContainer container;
+        private IServiceContext context;
 
         [ImportingConstructor]
-        public LoginService(IClientContainer clientContainer)
+        public LoginService(IClientContainer clientContainer, [Import(AllowDefault = true)] IServiceContext context)
         {
-            this.ClientContainer = clientContainer;
+            this.container = clientContainer;
+            this.context = context;
+        }
+
+        public string Ping()
+        {
+            return context.GetParameter("X-RESTify-Instance");
         }
 
         public LoginResponse Login(LoginRequest login)
         {
-            var client = ClientContainer.Create(login.UserName);
+            var client = container.Create(login.UserName);
             using (var loginService = client.GetService<ILoginService>())
             {
                 var response = loginService.Login(login);

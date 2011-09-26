@@ -8,8 +8,8 @@ namespace Restify.Server
 {
     public interface IClientContainer
     {
-        IClient Create(string agentId);
+        IClient Create(string userName);
         void Remove(IClient agent);
-        void Play();
+        IClient GetPlayToken();
     }
 }

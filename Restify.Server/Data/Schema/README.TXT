@@ -1,6 +1,7 @@
 ﻿
 /*
     RESTify SQL Schema for SQL Server Compact 4.0
+
         This is mostly similar to plain old T-SQL in SQL Server but 
         the Compact edition uses a smaller feature set 
         some things just don't work

@@ -98,6 +98,8 @@
     <Compile Include="ServiceModel\RestifyPlaylistRequest.cs" />
     <Compile Include="ServiceModel\RestifyTrackRequest.cs" />
     <Compile Include="ServiceModel\RestifyViewModel.cs" />
+    <Compile Include="Threading\IMessageQueue.cs" />
+    <Compile Include="Threading\MessageQueueExtensions.cs" />
     <Compile Include="Threading\ThreadContext.cs" />
     <Compile Include="Threading\CreateMutexMessage.cs" />
     <Compile Include="Threading\DelegateMessage.cs" />
@@ -117,6 +119,7 @@
     <None Include="app.config">
       <SubType>Designer</SubType>
     </None>
+    <Content Include="Content\spotify-search-button-32x32.png" />
     <Content Include="Data\Schema\Queue.TrackUniqueness.sql">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

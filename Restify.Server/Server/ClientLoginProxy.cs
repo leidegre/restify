@@ -14,6 +14,14 @@ namespace Restify.Server
         {
         }
 
+        public string Ping()
+        {
+            using (new OperationContextScope(InnerChannel))
+            {
+                return Channel.Ping();
+            }
+        }
+
         public LoginResponse Login(LoginRequest login)
         {
             using (new OperationContextScope(InnerChannel))

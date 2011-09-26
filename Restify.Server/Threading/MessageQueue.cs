@@ -1,15 +1,17 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel.Composition;
 using System.Linq;
 using System.Text;
 using System.Threading;
 
 namespace Restify.Threading
 {
-    public class MessageQueue
+    [Export(typeof(IMessageQueue))]
+    public class MessageQueue : IMessageQueue
     {
-        public class QuitMessage : IMessage
+        class QuitMessage : IMessage
         {
             public int ExitCode { get; private set; }
 
@@ -20,35 +22,6 @@ namespace Restify.Threading
 
             public void Invoke(IDictionary<string, object> state)
             {
-            }
-        }
-
-        public class SynchronizedMessage : IMessage
-        {
-            private IMessage msg;
-            private ManualResetEventSlim wait;
-
-            public SynchronizedMessage(IMessage msg)
-            {
-                this.msg = msg;
-                this.wait = new ManualResetEventSlim(false);
-            }
-
-            public void Invoke(IDictionary<string, object> state)
-            {
-                try
-                {
-                    msg.Invoke(state);
-                }
-                finally
-                {
-                    wait.Set();
-                }
-            }
-
-            public void Wait()
-            {
-                wait.Wait();
             }
         }
 
@@ -84,17 +57,6 @@ namespace Restify.Threading
         public void PostQuit(int exitCode)
         {
             queue.Add(new QuitMessage(exitCode));
-        }
-
-        public void PostSynchronized(IMessage msg)
-        {
-            if (msg == null)
-            {
-                throw new ArgumentNullException("msg");
-            }
-            var synchronizedMessage = new SynchronizedMessage(msg);
-            Post(synchronizedMessage);
-            synchronizedMessage.Wait();
         }
 
         public int RunMessageLoop()

@@ -15,6 +15,14 @@ namespace Restify.ServiceModel
     [ComposableServiceExport("/restify/master", typeof(BackEndGatewayService))]
     public class BackEndGatewayService : IClientService
     {
+        private IClientContainer container;
+
+        [ImportingConstructor]
+        public BackEndGatewayService(IClientContainer container)
+        {
+            this.container = container;
+        }
+
         public RestifySearchResult Search(string text)
         {
             throw new NotImplementedException();
@@ -22,17 +30,23 @@ namespace Restify.ServiceModel
 
         public void Play()
         {
-            throw new NotImplementedException();
+            var agent = container.GetPlayToken();
+            using (var client = agent.GetService<IClientService>())
+                client.Play();
         }
 
         public void PlayPause()
         {
-            throw new NotImplementedException();
+            var agent = container.GetPlayToken();
+            using (var client = agent.GetService<IClientService>())
+                client.PlayPause();
         }
 
         public void Next()
         {
-            throw new NotImplementedException();
+            var agent = container.GetPlayToken();
+            using (var client = agent.GetService<IClientService>())
+                client.Next();
         }
 
         void IDisposable.Dispose()

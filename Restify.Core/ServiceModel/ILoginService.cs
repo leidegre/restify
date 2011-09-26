@@ -12,6 +12,10 @@ namespace Restify.ServiceModel
     public interface ILoginService : IDisposable
     {
         [OperationContract]
+        [WebGet(UriTemplate = "/login/ping")]
+        string Ping();
+
+        [OperationContract]
         [WebInvoke(UriTemplate = "/login")]
         LoginResponse Login(LoginRequest login);
     }
